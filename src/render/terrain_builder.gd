@@ -165,11 +165,9 @@ func _build_outskirts() -> void:
 	while xfs.size() < 900 and attempts < 6000:
 		attempts += 1
 		var p := Vector2(rng.range_f(-MARGIN * 0.8, size.x + MARGIN * 0.8), rng.range_f(-MARGIN * 0.8, size.y + MARGIN * 0.8))
-		var inside := p.x > -30 and p.y > -30 and p.x < size.x + 30 and p.y < size.y + 30
-		if inside:
-			continue
 		var edge_d := maxf(maxf(-p.x, p.x - size.x), maxf(-p.y, p.y - size.y))
-		if rng.next_float() > 1.2 - edge_d / MARGIN:
+		# only on the horizon: the band right outside the map stays open ground
+		if edge_d < 220.0 or rng.next_float() > 1.3 - edge_d / MARGIN:
 			continue
 		var w := rng.range_f(8, 22)
 		var d := rng.range_f(8, 22)
