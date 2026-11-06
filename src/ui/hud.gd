@@ -28,6 +28,7 @@ var _support_buttons: Dictionary = {}
 var _reinforce_btn: Button
 var _llm_panel: PanelContainer
 var _llm_label: RichTextLabel
+var _fps: Label
 
 
 func setup(s: GameSession) -> void:
@@ -63,8 +64,17 @@ func setup(s: GameSession) -> void:
 	session.input.mode_changed.connect(_on_mode_changed)
 	_rebuild_selection()
 	on_speed_changed(session.speed)
-	if session.player_team < 0:
+	var has_llm := false
+	for t in session.config["teams"]:
+		has_llm = has_llm or t.get("controller", "") == "llm"
+	if has_llm:
 		_build_spectator_panel()
+	_fps = UITheme.label("", 12, UITheme.TEXT_DIM)
+	_fps.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_fps.position = Vector2(10, 8)
+	root.add_child(_fps)
+	if session.replay.is_empty() and session.sim.tick == 0 and not DevHarness.has_arg("no-briefing"):
+		show_briefing()
 
 
 # ================================================================== layout ===
@@ -161,6 +171,7 @@ func _build_bottom() -> void:
 	_sel_panel.add_child(_sel_box)
 
 	var cmd := PanelContainer.new()
+	cmd.visible = session.player_team >= 0
 	cmd.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	cmd.position = Vector2(-372, -238)
 	cmd.custom_minimum_size = Vector2(364, 230)
@@ -253,6 +264,9 @@ func _build_spectator_panel() -> void:
 func commander_log(team: int, text: String) -> void:
 	if _llm_label == null:
 		return
+	# a human player must not read the enemy commander's plans; status lines are fine
+	if session.player_team >= 0 and team != session.player_team and not text.begins_with("LLM"):
+		return
 	var col := session.view.team_color(team).to_html(false)
 	_llm_label.append_text("[color=#%s]%s:[/color] %s\n" % [col, session.sim.teams[team]["name"], text])
 
@@ -266,6 +280,7 @@ func _process(delta: float) -> void:
 		_refresh_top()
 		_refresh_selection_values()
 		_refresh_support()
+	_fps.text = ("%d FPS" % Engine.get_frames_per_second()) if Settings.get_value("graphics", "show_fps") else ""
 	_pause_banner.modulate.a = 0.75 + 0.25 * sin(Time.get_ticks_msec() / 250.0) if _pause_banner.visible else 1.0
 
 
@@ -530,7 +545,9 @@ func _on_mode_changed(m: String) -> void:
 		"smoke": _mode_label.text = "SMOKE: left-click where to throw smoke"
 		"attack_ground": _mode_label.text = "AREA FIRE: left-click target area"
 		_:
-			if m.begins_with("support:"):
+			if m.begins_with("spawn:"):
+				_mode_label.text = "PLACE %s: left-click to place, right-click to stop" % Defs.unit(m.split(":")[1])["name"].to_upper()
+			elif m.begins_with("support:"):
 				_mode_label.text = "%s: left-click target (right-click to cancel)" % Defs.SUPPORT[m.substr(8)]["name"].to_upper()
 
 
@@ -559,11 +576,99 @@ func toggle_menu() -> void:
 		var s := SettingsMenu.new()
 		root.add_child(s)
 		toggle_menu()))
+	vb.add_child(UITheme.button("Controls", func():
+		toggle_menu()
+		show_controls()))
 	vb.add_child(UITheme.button("Toggle Fog of War view", func():
 		session.view.fog.set_enabled(not session.view.fog.enabled)
 		toggle_menu()))
 	vb.add_child(UITheme.button("Quit to Main Menu", session.quit_to_menu))
 	root.add_child(_menu)
+
+
+## Mission/battle briefing shown at the start; the battle waits (paused) until dismissed.
+func show_briefing() -> void:
+	var cfg: Dictionary = session.config
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.position = Vector2(-330, -230)
+	panel.custom_minimum_size = Vector2(660, 0)
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 10)
+	panel.add_child(vb)
+	var sim := session.sim
+	var title: String = cfg.get("title", "")
+	if title == "":
+		title = {"skirmish": "SKIRMISH", "aivai": "AI VS AI", "sandbox": "SANDBOX"}.get(cfg.get("mode", ""), "BATTLE")
+	vb.add_child(UITheme.label(title, 26, UITheme.ACCENT))
+	var env: Dictionary = cfg.get("env", {})
+	vb.add_child(UITheme.label("%s · %s · %s" % [sim.map.name, String(env.get("tod", "day")).capitalize(), String(env.get("weather", "clear")).capitalize()], 14, UITheme.TEXT_DIM))
+	var text := String(cfg.get("briefing", ""))
+	if text == "":
+		var pt := maxi(session.player_team, 0)
+		text = "%s against %s. Capture objectives A–E to drain enemy tickets; every unit you lose costs tickets too." % [sim.teams[pt]["name"], sim.teams[1 - pt]["name"]]
+		if cfg.get("sandbox", false):
+			text = "Place units for either side from the panel on the right, set conditions and watch the simulation. No victory conditions."
+		elif session.player_team < 0:
+			text = "Two commanders fight it out. You are an observer: move the camera freely, select units to inspect them, change game speed."
+	var body := UITheme.label(text, 15)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD
+	body.custom_minimum_size = Vector2(620, 0)
+	vb.add_child(body)
+	if session.player_team >= 0:
+		var fac: Dictionary = Defs.FACTIONS[sim.teams[session.player_team]["faction"]]
+		var f := UITheme.label("Your force: %s — %s" % [fac["name"], fac["desc"]], 13, UITheme.TEXT_DIM)
+		f.autowrap_mode = TextServer.AUTOWRAP_WORD
+		f.custom_minimum_size = Vector2(620, 0)
+		vb.add_child(f)
+	var tip := UITheme.label("Tip: press Space at any time for TACTICAL PAUSE. Give orders while paused; they execute when you resume.", 13, UITheme.WARN)
+	tip.autowrap_mode = TextServer.AUTOWRAP_WORD
+	tip.custom_minimum_size = Vector2(620, 0)
+	vb.add_child(tip)
+	var hb := HBoxContainer.new()
+	hb.alignment = BoxContainer.ALIGNMENT_END
+	hb.add_theme_constant_override("separation", 10)
+	hb.add_child(UITheme.button("Controls", show_controls))
+	var go := UITheme.button("Begin", func():
+		panel.queue_free()
+		session.set_paused(false))
+	go.custom_minimum_size = Vector2(160, 38)
+	hb.add_child(go)
+	vb.add_child(hb)
+	root.add_child(panel)
+	session.set_paused(true)
+	_pause_banner.visible = false
+
+
+func show_controls() -> void:
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.position = Vector2(-360, -290)
+	panel.custom_minimum_size = Vector2(720, 0)
+	var vb := VBoxContainer.new()
+	panel.add_child(vb)
+	vb.add_child(UITheme.label("CONTROLS", 22, UITheme.ACCENT))
+	var rows := [
+		["Camera", "WASD / arrows / screen edge: pan · Mouse wheel: zoom (low zoom = cinematic) · Q/E or middle-drag: rotate · Shift+middle-drag: pan · F: follow unit"],
+		["Selection", "Left-click: select · Drag: box select · Shift: add/remove · Double-click / Ctrl+click: all of type on screen · Ctrl+1-9: assign group · 1-9: select group (double tap: center)"],
+		["Orders", "Right-click: move / attack enemy / garrison building / board transport · Alt+right-click: attack-move · Ctrl+right-click: area fire (mortars) · Shift: queue orders"],
+		["Commands", "T attack-move · X stop · H hold position · G leave building · U unload · C smoke · R retreat · V stance · Tab next idle unit · Home center"],
+		["Support", "F1–F4: support powers (then click target) · F5: reinforcements"],
+		["Time", "Space: tactical pause · + / -: game speed · Esc: menu / cancel"],
+		["Tactics", "Infantry in buildings are hard to hit. Tanks fear close-range anti-tank teams. Suppressed troops get pinned and may break. Vehicles are weakest from the sides and rear. Smoke blocks line of sight."],
+	]
+	for r in rows:
+		var hb := HBoxContainer.new()
+		var k := UITheme.label(r[0], 14, UITheme.ACCENT)
+		k.custom_minimum_size = Vector2(110, 0)
+		hb.add_child(k)
+		var v := UITheme.label(r[1], 13)
+		v.autowrap_mode = TextServer.AUTOWRAP_WORD
+		v.custom_minimum_size = Vector2(580, 0)
+		hb.add_child(v)
+		vb.add_child(hb)
+	vb.add_child(UITheme.button("Close", panel.queue_free))
+	root.add_child(panel)
 
 
 func show_end_screen(outcome: Dictionary) -> void:

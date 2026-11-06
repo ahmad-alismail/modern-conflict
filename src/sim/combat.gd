@@ -7,7 +7,7 @@ class_name Combat
 const COVER_MOD := [1.0, 0.68, 0.42]
 const SPLASH_COVER := [1.0, 0.6, 0.35]
 const JAM_RADIUS := 80.0
-const LINK_RADIUS := 150.0
+const LINK_RADIUS := 180.0
 const MINE := {"name": "AT Mine", "damage": 480.0, "pen": 260.0, "splash": 4.0, "suppress": 30.0, "proj": Defs.P_BOMB}
 const STRIKE_SHELL := {"name": "155mm Shell", "splash_dmg": 220.0, "damage": 280.0, "pen": 80.0, "splash": 12.0, "suppress": 60.0, "proj": Defs.P_MORTAR}
 const STRIKE_BOMB := {"name": "Bomb", "splash_dmg": 300.0, "damage": 450.0, "pen": 120.0, "splash": 15.0, "suppress": 80.0, "proj": Defs.P_BOMB}

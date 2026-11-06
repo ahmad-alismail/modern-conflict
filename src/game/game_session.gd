@@ -38,7 +38,10 @@ func start(p_config: Dictionary) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	var map: MapDef = config.get("map")
 	if map == null:
-		map = CityGenerator.generate(int(config.get("map_seed", 1)), {"war_damage": config.get("war_damage", 0.25)})
+		var gen_opts := {"war_damage": config.get("war_damage", 0.25)}
+		if String(config.get("map_name", "")) != "":
+			gen_opts["name"] = config["map_name"]
+		map = CityGenerator.generate(int(config.get("map_seed", 1)), gen_opts)
 	initial_map = config.get("initial_map", map.to_dict())
 	var teams := []
 	for t in config["teams"]:
@@ -51,13 +54,13 @@ func start(p_config: Dictionary) -> void:
 	sim = SimWorld.new()
 	sim.setup({"map": map, "seed": int(config.get("seed", 1)), "mode": config.get("victory", "vp"),
 		"tickets": int(config.get("tickets", 500)), "time_limit": float(config.get("time_limit", 0.0)),
-		"hold_team": int(config.get("hold_team", -1)), "id": config.get("scenario_id", ""),
+		"hold_team": int(config.get("hold_team", -1)), "id": config.get("scenario_id", ""), "sandbox": config.get("sandbox", false),
 		"env": {"night": env.get("tod", "day") == "night", "weather": env.get("weather", "clear")}, "teams": teams})
 	if config.has("state"):
 		Serializer.restore(sim, config["state"])
 	_build_presentation(env)
 	_setup_commanders()
-	set_speed(float(Settings.get_value("gameplay", "default_speed")))
+	set_speed(float(DevHarness.arg("speed", str(Settings.get_value("gameplay", "default_speed")))))
 	_last_us = Time.get_ticks_usec()
 	if config.has("replay"):
 		replay = config["replay"]
@@ -94,6 +97,11 @@ func _build_presentation(env: Dictionary) -> void:
 	hud = Hud.new()
 	add_child(hud)
 	hud.setup(self)
+	if config.get("sandbox", false):
+		view.fog.set_enabled(false)
+		var panel := SandboxPanel.new()
+		hud.root.add_child(panel)
+		panel.setup(self)
 	if audio.has_method("set_ambience"):
 		audio.set_ambience(env.get("weather", "clear"), 0.2)
 
@@ -145,6 +153,10 @@ func _process(_delta: float) -> void:
 	for e in events:
 		if e["t"] == "game_over":
 			_on_game_over(e)
+	if DevHarness.has_arg("fps-log") and Engine.get_process_frames() % 300 == 0:
+		print("[perf] fps=%d units=%d proj=%d draw_calls=%d prims=%dk sim_t=%ds" % [Engine.get_frames_per_second(), sim.units.size(), sim.projectiles.size(),
+			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
+			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME) / 1000, int(sim.time)])
 
 
 func _tick() -> void:
@@ -154,9 +166,9 @@ func _tick() -> void:
 			sim.issue(log[_replay_i]["cmd"])
 			_replay_i += 1
 	else:
-		for c in commanders:
-			if c != null:
-				c.think(sim)
+		for ti in commanders.size():
+			if commanders[ti] != null and ai_enabled[ti]:
+				commanders[ti].think(sim)
 	sim.step()
 
 
@@ -174,8 +186,32 @@ func _track_battle_level(events: Array, dt: float) -> void:
 func issue(cmd: Dictionary) -> void:
 	if not replay.is_empty() or _game_over:
 		return
-	cmd["team"] = player_team
+	cmd["team"] = maxi(player_team, 0)
 	sim.issue(cmd)
+
+
+# ================================================================= sandbox ===
+
+var ai_enabled := [true, true]
+
+
+func set_ai_enabled(team: int, on: bool) -> void:
+	ai_enabled[team] = on
+
+
+## Sandbox: take control of the other side (fog, selection and orders follow).
+func switch_control(team: int) -> void:
+	player_team = team
+	ai_enabled[team] = false
+	view.player_team = team
+	view.fog.team = team
+	view.fog.set_enabled(view.fog.enabled)
+	input.set_selection([])
+
+
+func set_conditions(tod: String, weather: String) -> void:
+	env_rig.set_conditions(tod, weather)
+	issue({"type": "set_env", "tod": tod, "weather": weather})
 
 
 func set_paused(p: bool) -> void:

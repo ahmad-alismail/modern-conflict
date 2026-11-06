@@ -33,6 +33,7 @@ var mode := "vp"                      # vp | annihilation | hold
 var time_limit := 0.0                 # seconds, 0 = none
 var hold_team := -1                   # mode "hold": team that must hold objectives
 var scenario_id := ""
+var sandbox := false                  # allows spawn/despawn commands (sandbox mode)
 var _next_id := 1
 var next_proj := 1
 var _grid: Dictionary = {}
@@ -52,6 +53,7 @@ func setup(scenario: Dictionary) -> void:
 	time_limit = float(scenario.get("time_limit", 0.0))
 	hold_team = int(scenario.get("hold_team", -1))
 	scenario_id = scenario.get("id", "")
+	sandbox = scenario.get("sandbox", false)
 	env = scenario.get("env", env).duplicate()
 	for b in map.buildings:
 		var area: float = b["size"].x * b["size"].y
@@ -154,6 +156,28 @@ func _apply(cmd: Dictionary) -> bool:
 			return Support.request(self, team, cmd.get("power", ""), cmd.get("pos", Vector2.ZERO), cmd.get("dir", Vector2.RIGHT))
 		"reinforce":
 			return Support.reinforce(self, team)
+		"spawn":
+			if not sandbox or not Defs.UNITS.has(cmd.get("def", "")):
+				return false
+			var st: int = clampi(int(cmd.get("spawn_team", team)), 0, teams.size() - 1)
+			var d := Defs.unit(cmd["def"])
+			var face := 0.0 if map.team_spawn(st).get_center().x < map.size_m().x * 0.5 else PI
+			spawn_unit(st, cmd["def"], nav.nearest_open_point(d["move"], cmd["pos"]), face)
+			return true
+		"despawn":
+			if not sandbox:
+				return false
+			for id in cmd.get("ids", []):
+				var du: SimUnit = by_id.get(int(id))
+				if du != null and du.alive:
+					Combat.destroy_unit(self, du, -1, true)
+			return true
+		"set_env":
+			if not sandbox:
+				return false
+			env["night"] = cmd.get("tod", "day") == "night"
+			env["weather"] = cmd.get("weather", env.get("weather", "clear"))
+			return true
 	var sel := _own_units(cmd)
 	if sel.is_empty():
 		return false

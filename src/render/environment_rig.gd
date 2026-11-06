@@ -135,22 +135,22 @@ func set_conditions(tod: String, wx: String) -> void:
 	var exposure := 1.0
 	match tod:
 		"dawn":
-			elev = 12.0
+			elev = 14.0
 			azim = 75.0
-			sun_col = Color(1.0, 0.72, 0.5)
-			sun_e = 0.9
-			top = Color(0.3, 0.38, 0.58)
-			hor = Color(0.95, 0.68, 0.5)
-			amb_e = 0.75
+			sun_col = Color(1.0, 0.8, 0.62)
+			sun_e = 1.0
+			top = Color(0.32, 0.42, 0.62)
+			hor = Color(0.88, 0.74, 0.62)
+			amb_e = 0.85
 		"dusk":
-			elev = 9.0
+			elev = 11.0
 			azim = 255.0
-			sun_col = Color(1.0, 0.6, 0.36)
-			sun_e = 0.85
-			top = Color(0.22, 0.27, 0.48)
-			hor = Color(0.98, 0.55, 0.35)
-			amb_e = 0.7
-			exposure = 1.1
+			sun_col = Color(1.0, 0.74, 0.52)
+			sun_e = 1.0
+			top = Color(0.26, 0.32, 0.52)
+			hor = Color(0.86, 0.66, 0.52)
+			amb_e = 0.85
+			exposure = 1.05
 		"night":
 			elev = 38.0
 			azim = 200.0
@@ -167,11 +167,11 @@ func set_conditions(tod: String, wx: String) -> void:
 	var vol_albedo := Color(0.86, 0.8, 0.7)
 	match wx:
 		"haze":
-			vol_density = 0.008
-			depth_begin = 120.0
-			depth_end = 900.0
-			sun_e *= 0.85
-			fog_col = Color(0.82, 0.76, 0.66)
+			vol_density = 0.006
+			depth_begin = 150.0
+			depth_end = 1000.0
+			sun_e *= 0.9
+			fog_col = fog_col.lerp(Color(0.8, 0.77, 0.7), 0.5)
 		"dust":
 			vol_density = 0.03
 			depth_begin = 20.0

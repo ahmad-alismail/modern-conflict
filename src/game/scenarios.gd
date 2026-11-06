@@ -5,6 +5,7 @@ class_name Scenarios
 const LIST := [
 	{
 		"id": "old_quarter",
+		"place": "Tell Hamra",
 		"title": "1. The Old Quarter",
 		"subtitle": "Coalition Defense Force · Dusk · Tell Hamra",
 		"briefing": "Brigade militia have dug into the souq and the old quarter of Tell Hamra. Your company must clear the district street by street. Expect RPG teams in upper floors and technicals racing through the alleys. Use your tanks as overwatch, not as battering rams, and let the infantry clear buildings.",
@@ -18,6 +19,7 @@ const LIST := [
 	},
 	{
 		"id": "long_avenue",
+		"place": "Qasr al-Nur",
 		"title": "2. The Long Avenue",
 		"subtitle": "People's Defense Brigades · Day · Qasr al-Nur",
 		"briefing": "An armored Coalition column is pushing down the main avenue toward the city center. You cannot stop tanks head-on. Hide your RPG teams in buildings along the flanks, mine the approaches, and strike the column's sides and rear. Hold on until the deadline.",
@@ -32,6 +34,7 @@ const LIST := [
 	},
 	{
 		"id": "iron_sky",
+		"place": "Deir Saman",
 		"title": "3. Iron Sky",
 		"subtitle": "Helix Autonomous Command · Dust storm · Deir Saman",
 		"briefing": "A dust storm blinds the Coalition's optics, but your drones and sensor masts still see. Keep your robots inside the network: units far from an operator team, EW vehicle or sensor mast lose accuracy. Coalition attack helicopters and autocannons are the main threat to your drones.",
@@ -42,6 +45,7 @@ const LIST := [
 	},
 	{
 		"id": "night_raid",
+		"place": "Ayn Zarqa",
 		"title": "4. Night Raid",
 		"subtitle": "Coalition Defense Force · Night · Ayn Zarqa",
 		"briefing": "A small, fast Coalition force strikes at night. Your thermal sights see in the dark; the militia's do not. Strike fast, take the objectives, and do not let the fight drag on until dawn.",
@@ -55,6 +59,7 @@ const LIST := [
 	},
 	{
 		"id": "swarm",
+		"place": "Kafr Ruma",
 		"title": "5. The Swarm",
 		"subtitle": "People's Defense Brigades · Rain · Kafr Ruma",
 		"briefing": "Helix robots and drones are sweeping into Kafr Ruma. Small arms barely scratch the Hound robots; heavy machine guns, RPGs and MANPADS do. Fight from buildings, where drones struggle to see you, and hold out until the storm clears.",
@@ -91,7 +96,7 @@ static func build(id: String, difficulty: String) -> Dictionary:
 		teams.append(t)
 	return {
 		"mode": "scenario", "scenario_id": id, "map_seed": s["map_seed"], "seed": s["map_seed"] * 3 + 1,
-		"war_damage": s["war"], "player_team": pt, "teams": teams, "victory": s["victory"],
+		"war_damage": s["war"], "map_name": s.get("place", ""), "player_team": pt, "teams": teams, "victory": s["victory"],
 		"tickets": s.get("tickets", 500), "time_limit": s.get("time_limit", 0.0), "hold_team": s.get("hold_team", -1),
 		"env": {"tod": s["tod"], "weather": s["weather"]}, "briefing": s["briefing"], "title": s["title"],
 	}

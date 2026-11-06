@@ -224,6 +224,10 @@ func _start() -> void:
 			cfg["mode"] = "sandbox"
 			cfg["sandbox"] = true
 			cfg["victory"] = "none"
+			for t in cfg["teams"]:
+				t["forces"] = []
+				t["reinforcements"] = []
+			cfg["teams"][1]["controller"] = "ai"
 		_:
 			cfg = GameConfig.skirmish(f0, f1, DIFFS[_c1.selected], int(_seed.value), opts)
 	Events.navigate.emit("game", cfg)

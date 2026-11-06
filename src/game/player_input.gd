@@ -430,6 +430,10 @@ func _targeting_click(pos: Vector2, shift: bool) -> void:
 		_issue({"type": "smoke", "ids": inf, "pos": p})
 	elif mode == "attack_ground":
 		_issue({"type": "attack_ground", "ids": ids, "pos": p, "queue": shift})
+	elif mode.begins_with("spawn:"):
+		var parts := mode.split(":")
+		session.issue({"type": "spawn", "def": parts[1], "spawn_team": int(parts[2]), "pos": p})
+		return
 	elif mode.begins_with("support:"):
 		var power := mode.substr(8)
 		var dir := session.cam.forward_2d()
