@@ -111,3 +111,27 @@ func set_ambience(weather: String, intensity: float) -> void   # intensity 0..1 
 ```
 All sounds are synthesized at startup (`AudioStreamWAV` from generated PCM). Use buses
 Master, SFX, Ambience, UI with volumes from the `Settings` autoload (`audio.*`).
+
+---
+
+## Implementation notes (as delivered)
+- **Buildings/props** (`src/render/env/`) use their own fast packed-array geometry builder (`EnvGeo`), not MeshKit.
+  - One surface shader (`env_surface.gdshader`) covers 16 surface types, picked by vertex-color alpha, with model-space procedural patterns and per-instance `scorch`.
+  - Each building has a main mesh plus a detail mesh that hides beyond 260 m.
+  - `apply_damage(node, level)` rebuilds the node's tagged parts; level 0 restores the intact building.
+  - `EnvMaterials.set_night_lights(amount)` lights windows and lamps; `EnvironmentRig` calls it per time of day.
+  - Map buildings may carry `ruined` / `damaged` flags, which mean pre-war damage at match start.
+- **Units** (`src/render/units/`) use their own builder (`UnitMesh`) with bone ids.
+  - Soldiers are GPU-skinned in `soldier_rig.gd`: one draw call each, two-bone IK arms, a pose table, and instance uniforms for state blending.
+  - Vehicles use one shared shader for wheels, tracks, rotors and recoil.
+  - Squad recoil is automatic unless `fire_recoil` is called on a squad.
+  - `GameSession` pre-warms every model's shaders behind the loading overlay.
+- **Effects** (`src/render/fx/`) run through three shared GPUParticles3D batchers (lit smoke/dust, additive glow, debris), plus a capped light pool and a ring of 120 crater decals. Additions:
+  - `signal shake(strength, pos)`;
+  - `release_projectile(node)`;
+  - `tracer(from, to, color, impact_kind := "auto")`;
+  - `set_wind(v)`, `is_paused()`;
+  - low-level `emit_smoke`, `emit_glow`, `emit_debris` (used by `WorldView` for damaged-vehicle smoke and fire).
+- **Audio** (`src/audio/`):
+  - `Synth` generates 33 clips / 66 variants on the WorkerThreadPool.
+  - `AudioManager` adds `play_loop(sound, node, db)`, `stop_loop(p)`, `set_paused(p)`, `is_ready()`, a 48-voice pool with stealing, per-sound rate limiting, and runtime buses with a master limiter.
