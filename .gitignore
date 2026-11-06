@@ -1,0 +1,10 @@
+# Godot
+.godot/
+*.import.tmp
+# Local toolchain (engine binary, docs dump, templates)
+.tools/
+# Build output
+build/
+# Screenshots / scratch
+shots/
+*.log
