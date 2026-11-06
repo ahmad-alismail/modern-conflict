@@ -43,7 +43,7 @@ const DEFAULTS := {
 		"ollama_model": "llama3.1",
 		"openai_url": "http://localhost:1234/v1",
 		"openai_model": "local-model",
-		"anthropic_model": "claude-haiku-5-5",
+		"anthropic_model": "claude-opus-5-5",
 		"remember_keys": false,
 		"openai_key": "",
 		"anthropic_key": "",

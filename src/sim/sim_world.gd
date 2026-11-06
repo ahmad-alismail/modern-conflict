@@ -952,7 +952,7 @@ func _update_objectives(dt: float) -> void:
 		var diff: int = owned[0] - owned[1]
 		if diff != 0:
 			var loser := 1 if diff > 0 else 0
-			teams[loser]["tickets"] -= absi(diff) * 0.6 * dt
+			teams[loser]["tickets"] -= absi(diff) * 0.22 * dt
 
 
 func _buildings_near(p: Vector2, r: float) -> Array:
@@ -967,11 +967,11 @@ func on_unit_lost(u: SimUnit) -> void:
 	var t: Dictionary = teams[u.team]
 	t["stats"]["lost"] += 1
 	if mode == "vp":
-		t["tickets"] -= float(u.def["points"]) * 0.75
+		t["tickets"] -= float(u.def["points"]) * 0.5
 
 
 func _check_victory() -> void:
-	if not outcome.is_empty():
+	if not outcome.is_empty() or mode == "none":
 		return
 	var alive_count := []
 	for ti in teams.size():

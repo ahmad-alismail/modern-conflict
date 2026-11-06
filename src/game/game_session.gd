@@ -1,0 +1,227 @@
+extends Node
+## One running battle. Owns the SimWorld and its presentation, steps the simulation
+## at a fixed rate scaled by game speed, implements tactical pause (the sim stops,
+## camera/orders/UI keep working; orders queue and execute on resume), and routes
+## events to the view, audio and HUD.
+class_name GameSession
+
+signal ended(outcome: Dictionary)
+
+const SPEEDS := [0.5, 1.0, 2.0, 3.0, 4.0]
+const MAX_STEPS_PER_FRAME := 10
+
+var config: Dictionary
+var sim: SimWorld
+var view: WorldView
+var cam: CameraRig
+var env_rig: EnvironmentRig
+var fx: Effects
+var audio: Node
+var hud: Node
+var input: Node
+var commanders: Array = []
+var player_team := 0
+var paused := false
+var speed := 1.0
+var replay: Dictionary = {}       # when set, the session plays back a recorded command log
+var initial_map: Dictionary = {}  # pristine map (before battle damage) for replays
+var _acc := 0.0
+var _last_us := 0
+var _game_over := false
+var _replay_i := 0
+var _battle_level := 0.0
+
+
+## config: see GameConfig.make_* helpers (mode, map, seed, teams, player_team, env, tickets, ...).
+func start(p_config: Dictionary) -> void:
+	config = p_config
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	var map: MapDef = config.get("map")
+	if map == null:
+		map = CityGenerator.generate(int(config.get("map_seed", 1)), {"war_damage": config.get("war_damage", 0.25)})
+	initial_map = config.get("initial_map", map.to_dict())
+	var teams := []
+	for t in config["teams"]:
+		var td := {"faction": t["faction"], "name": t.get("name", Defs.FACTIONS[t["faction"]]["name"])}
+		for k in ["forces", "placed", "support", "reinforcements", "tickets"]:
+			if t.has(k):
+				td[k] = t[k]
+		teams.append(td)
+	var env: Dictionary = config.get("env", {"tod": "day", "weather": "clear"})
+	sim = SimWorld.new()
+	sim.setup({"map": map, "seed": int(config.get("seed", 1)), "mode": config.get("victory", "vp"),
+		"tickets": int(config.get("tickets", 500)), "time_limit": float(config.get("time_limit", 0.0)),
+		"hold_team": int(config.get("hold_team", -1)), "id": config.get("scenario_id", ""),
+		"env": {"night": env.get("tod", "day") == "night", "weather": env.get("weather", "clear")}, "teams": teams})
+	if config.has("state"):
+		Serializer.restore(sim, config["state"])
+	_build_presentation(env)
+	_setup_commanders()
+	set_speed(float(Settings.get_value("gameplay", "default_speed")))
+	_last_us = Time.get_ticks_usec()
+	if config.has("replay"):
+		replay = config["replay"]
+
+
+func _build_presentation(env: Dictionary) -> void:
+	player_team = int(config.get("player_team", 0))
+	env_rig = EnvironmentRig.new()
+	add_child(env_rig)
+	env_rig.set_conditions(env.get("tod", "day"), env.get("weather", "clear"))
+	fx = Effects.new()
+	add_child(fx)
+	audio = AudioManager.new()
+	add_child(audio)
+	view = WorldView.new()
+	add_child(view)
+	view.setup(sim, player_team, fx, audio)
+	cam = CameraRig.new()
+	add_child(cam)
+	var size := sim.map.size_m()
+	var start_team := maxi(player_team, 0)
+	var sp := sim.map.team_spawn(start_team).get_center()
+	var toward := (size * 0.5 - sp).normalized()
+	cam.setup(Rect2(Vector2.ZERO, size), Vector3(sp.x, 0, sp.y) + Vector3(toward.x, 0, toward.y) * 30.0, toward.angle(), float(DevHarness.arg("cam-dist", "120")))
+	cam.view_changed.connect(_on_view_changed)
+	env_rig.follow(cam.camera)
+	view.fog.attach_to_camera(cam.camera)
+	view.set_shake_callback(cam.shake)
+	if fx.has_signal("shake"):
+		fx.connect("shake", cam.shake)
+	input = PlayerInput.new()
+	add_child(input)
+	input.setup(self)
+	hud = Hud.new()
+	add_child(hud)
+	hud.setup(self)
+	if audio.has_method("set_ambience"):
+		audio.set_ambience(env.get("weather", "clear"), 0.2)
+
+
+func _setup_commanders() -> void:
+	commanders.clear()
+	for ti in config["teams"].size():
+		var t: Dictionary = config["teams"][ti]
+		var c = null
+		match t.get("controller", "human" if ti == player_team else "ai"):
+			"replay", "human":
+				c = null
+			"ai":
+				c = ClassicAI.new(ti, t.get("difficulty", "medium"))
+			"llm":
+				c = LLMCommander.new(ti, self)
+		commanders.append(c)
+
+
+func _on_view_changed(d: float) -> void:
+	env_rig.set_view_distance(d)
+	env_rig.set_dof(d < 22.0, d)
+	view.camera_pos = cam.camera.global_position
+	if audio.has_method("set_listener_height"):
+		audio.set_listener_height(d)
+
+
+# ================================================================ main loop ===
+
+func _process(_delta: float) -> void:
+	var now := Time.get_ticks_usec()
+	var dt := clampf((now - _last_us) / 1000000.0, 0.0, 0.1)
+	_last_us = now
+	if not paused and not _game_over:
+		_acc += dt * speed
+		var steps := 0
+		while _acc >= SimWorld.DT and steps < MAX_STEPS_PER_FRAME:
+			_tick()
+			_acc -= SimWorld.DT
+			steps += 1
+		if steps == MAX_STEPS_PER_FRAME:
+			_acc = 0.0
+	var alpha := clampf(_acc / SimWorld.DT, 0.0, 1.0) if not paused else 1.0
+	view.sync(alpha, dt if not paused else 0.0)
+	var events := sim.drain_events()
+	view.handle_events(events)
+	hud.handle_events(events)
+	_track_battle_level(events, dt)
+	for e in events:
+		if e["t"] == "game_over":
+			_on_game_over(e)
+
+
+func _tick() -> void:
+	if not replay.is_empty():
+		var log: Array = replay["commands"]
+		while _replay_i < log.size() and int(log[_replay_i]["tick"]) <= sim.tick:
+			sim.issue(log[_replay_i]["cmd"])
+			_replay_i += 1
+	else:
+		for c in commanders:
+			if c != null:
+				c.think(sim)
+	sim.step()
+
+
+func _track_battle_level(events: Array, dt: float) -> void:
+	var n := 0
+	for e in events:
+		if e["t"] in ["shot", "impact", "launch"]:
+			n += 1
+	_battle_level = lerpf(_battle_level, clampf(n / 6.0, 0.0, 1.0), clampf(dt * 0.6, 0.0, 1.0))
+	if Engine.get_process_frames() % 30 == 0 and audio.has_method("set_ambience"):
+		audio.set_ambience(env_rig.weather, _battle_level)
+
+
+## Player (or UI) command entry point.
+func issue(cmd: Dictionary) -> void:
+	if not replay.is_empty() or _game_over:
+		return
+	cmd["team"] = player_team
+	sim.issue(cmd)
+
+
+func set_paused(p: bool) -> void:
+	paused = p
+	view.set_paused(p)
+	hud.on_pause_changed(p)
+
+
+func toggle_pause() -> void:
+	set_paused(not paused)
+
+
+func set_speed(s: float) -> void:
+	speed = clampf(s, 0.25, 8.0)
+	if hud:
+		hud.on_speed_changed(speed)
+
+
+func step_speed(dir: int) -> void:
+	var idx := SPEEDS.find(speed)
+	if idx < 0:
+		idx = 1
+	set_speed(SPEEDS[clampi(idx + dir, 0, SPEEDS.size() - 1)])
+
+
+func _on_game_over(e: Dictionary) -> void:
+	if _game_over:
+		return
+	_game_over = true
+	var outcome := sim.outcome.duplicate()
+	outcome["player_team"] = player_team
+	outcome["stats"] = [sim.teams[0]["stats"].duplicate(), sim.teams[1]["stats"].duplicate()]
+	outcome["replay"] = make_replay()
+	hud.show_end_screen(outcome)
+	ended.emit(outcome)
+
+
+func make_replay() -> Dictionary:
+	var cfg := config.duplicate()
+	cfg.erase("map")
+	cfg.erase("state")
+	cfg.erase("replay")
+	cfg.erase("initial_map")
+	return {"version": 1, "config": cfg, "map": initial_map, "commands": sim.command_log.duplicate(true), "ticks": sim.tick,
+		"title": "%s — %s vs %s" % [sim.map.name, sim.teams[0]["name"], sim.teams[1]["name"]]}
+
+
+func quit_to_menu() -> void:
+	Events.navigate.emit("menu", {})

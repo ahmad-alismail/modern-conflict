@@ -278,7 +278,7 @@ static func hit_chance(w: SimWorld, u: SimUnit, wd: Dictionary, t: SimUnit, d: f
 	var acc: float = lerpf(wd["acc_near"], wd["acc_far"], f)
 	if t.is_squad():
 		if t.state == SimUnit.State.GARRISONED:
-			acc *= 0.3 if Defs.has_special(t.def, "urban_bonus") else 0.36
+			acc *= 0.26 if Defs.has_special(t.def, "urban_bonus") else 0.36
 		else:
 			acc *= COVER_MOD[w.nav.cover_at(t.pos)]
 		if t.pinned:
@@ -292,7 +292,7 @@ static func hit_chance(w: SimWorld, u: SimUnit, wd: Dictionary, t: SimUnit, d: f
 	else:
 		acc *= wd.get("air_acc", 0.3)
 		if t.has_special("drone"):
-			acc *= 0.75
+			acc *= 0.75 if wd["pen"] >= 15.0 else 0.45
 	if u.is_moving():
 		acc *= 0.8 if (u.cat == Defs.CAT_VEH and u.def.get("thermal", false)) else 0.5
 	if u.pinned:

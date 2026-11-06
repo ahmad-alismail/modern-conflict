@@ -85,11 +85,17 @@ static func _team_sees(w: SimWorld, viewers: Array, t: SimUnit, team: int) -> bo
 	for r in w.reveals:
 		if r["team"] == team and t.pos.distance_to(r["p"]) <= r["r"] and t.state != SimUnit.State.GARRISONED:
 			return true
+	var t_alt := t.alt if t.is_air() else 0.0
+	var is_drone := t.has_special("drone")
 	for v: SimUnit in viewers:
-		var d := v.pos.distance_to(t.pos)
+		var dz := (v.alt if v.is_air() else 0.0) - t_alt
+		var d := sqrt(v.pos.distance_squared_to(t.pos) + dz * dz)
 		if d <= PROXIMITY:
 			return true
-		if d > detect_range(w, v, t):
+		var rng := detect_range(w, v, t)
+		if is_drone:
+			rng = maxf(rng, 60.0)   # rotor noise gives drones away at short range
+		if d > rng:
 			continue
 		if w.has_los_units(v, t):
 			return true
