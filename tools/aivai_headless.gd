@@ -22,6 +22,11 @@ func _initialize() -> void:
 			var w := SimWorld.new()
 			w.setup({"map": m, "seed": seed_v, "tickets": 500, "teams": [{"faction": f[0]}, {"faction": f[1]}]})
 			var ais := [ClassicAI.new(0, d0), ClassicAI.new(1, d1)]
+			# --p1=key:value;key:value overrides team 1's profile (experiments)
+			for kv in String(args.get("p1", "")).split(";", false):
+				var parts := kv.split(":")
+				var cur = ais[1].p[parts[0]]
+				ais[1].p[parts[0]] = (parts[1] == "true") if typeof(cur) == TYPE_BOOL else float(parts[1])
 			var t0 := Time.get_ticks_msec()
 			while w.outcome.is_empty() and w.tick < max_ticks:
 				for ai in ais:

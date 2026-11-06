@@ -14,15 +14,17 @@ extends Commander
 class_name ClassicAI
 
 const PROFILES := {
+	# aggression: 1.0 = attacks the strongest points head-on (naive), lower = exploits weak spots
+	# targets: how many objectives forces are split across (concentration of force wins; novices spread thin)
 	"easy": {"react": 3.2, "strategic": 13.0, "noise": 0.45, "support": 0.3, "garrison": 0.3, "retreat_hp": 0.0,
 		"focus": false, "combined": false, "targets": 3, "smoke": 0.15, "scout": false, "avoid_aa": false,
-		"reinforce_at": 0.4, "stage": false, "aggression": 0.6},
-	"medium": {"react": 1.6, "strategic": 8.0, "noise": 0.2, "support": 0.7, "garrison": 0.6, "retreat_hp": 0.25,
+		"reinforce_at": 0.4, "stage": false, "aggression": 1.0},
+	"medium": {"react": 1.6, "strategic": 8.0, "noise": 0.2, "support": 0.7, "garrison": 0.6, "retreat_hp": 0.2,
 		"focus": true, "combined": true, "targets": 2, "smoke": 0.5, "scout": true, "avoid_aa": true,
-		"reinforce_at": 0.65, "stage": false, "aggression": 0.8},
-	"hard": {"react": 0.7, "strategic": 5.0, "noise": 0.06, "support": 1.0, "garrison": 0.85, "retreat_hp": 0.34,
-		"focus": true, "combined": true, "targets": 2, "smoke": 0.9, "scout": true, "avoid_aa": true,
-		"reinforce_at": 0.8, "stage": true, "aggression": 1.0},
+		"reinforce_at": 0.65, "stage": false, "aggression": 0.75},
+	"hard": {"react": 0.7, "strategic": 6.0, "noise": 0.06, "support": 1.0, "garrison": 0.85, "retreat_hp": 0.28,
+		"focus": true, "combined": true, "targets": 1, "smoke": 0.9, "scout": true, "avoid_aa": true,
+		"reinforce_at": 0.8, "stage": true, "aggression": 0.45},
 }
 
 var difficulty := "medium"
@@ -46,7 +48,7 @@ var doctrine := "combined"         # "combined" (CDF), "ambush" (PDB), "network"
 func _init(p_team: int, p_difficulty: String) -> void:
 	team = p_team
 	difficulty = p_difficulty if PROFILES.has(p_difficulty) else "medium"
-	p = PROFILES[difficulty]
+	p = PROFILES[difficulty].duplicate()
 	rng = Rng.new(9173 + p_team * 31)
 	_react_t = rng.range_f(0.2, 1.0)
 
@@ -279,10 +281,11 @@ func _send_to_objective(w: SimWorld, u: SimUnit, t: Dictionary, known: Array) ->
 					issue(w, {"type": "garrison", "ids": [u.id], "bld": bi})
 			return
 	else:
-		var off := Vector2.from_angle(u.id * 2.39996) * rng.range_f(0.0, o["r"] * 0.8)
+		# stable per-unit slot inside the objective (re-planning must not jitter units)
+		var off: Vector2 = Vector2.from_angle(u.id * 2.39996) * (fmod(u.id * 0.618034, 1.0) * o["r"] * 0.8)
 		goal += off
 	# staged assault (hard): gather before committing against a defended objective
-	if p["stage"] and t["enemy"] > 12.0 and r != "recon":
+	if p["stage"] and t["enemy"] > 20.0 and r != "recon":
 		var st: Dictionary = _staging.get(oi, {})
 		if st.is_empty() or w.time - st["since"] > 120.0:
 			st = {"pos": o["p"].lerp(_spawn, 0.0) + (_spawn - o["p"]).normalized() * 95.0, "since": w.time, "go": false}
@@ -296,7 +299,7 @@ func _send_to_objective(w: SimWorld, u: SimUnit, t: Dictionary, known: Array) ->
 					total += 1
 					if v.pos.distance_to(st["pos"]) < 45.0:
 						near += 1
-			if (total > 0 and float(near) / total >= 0.65) or w.time - st["since"] > 45.0:
+			if (total > 0 and float(near) / total >= 0.65) or w.time - st["since"] > 25.0:
 				st["go"] = true
 			else:
 				var sp := w.nav.nearest_open_point(u.move_class, st["pos"] + Vector2.from_angle(u.id * 1.7) * 12.0)
@@ -323,6 +326,9 @@ func _ambush_building(w: SimWorld, obj: Vector2, u: SimUnit) -> int:
 		if d > 60.0:
 			continue
 		var s := -d * 0.4 + (c - obj).normalized().dot(toward_enemy) * 12.0 - c.distance_to(u.pos) * 0.05
+		# buildings touching the capture circle actually hold the objective
+		if w.building_distance(bi, obj) <= 15.0:
+			s += 30.0
 		if s > best_s:
 			best_s = s
 			best = bi

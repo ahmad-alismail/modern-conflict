@@ -84,7 +84,7 @@ func _init(p_team: int, p_session) -> void:
 		_log("LLM commander unavailable (%s); classic AI is in command." % _disabled_reason)
 	elif session != null:
 		_http = HTTPRequest.new()
-		_http.timeout = 120.0
+		_http.timeout = 180.0
 		session.add_child(_http)
 		_http.request_completed.connect(_on_response)
 		_log("LLM commander online (%s · %s)" % [_provider, _model()])
