@@ -252,7 +252,7 @@ func _apply(cmd: Dictionary) -> bool:
 
 
 func _push_order(u: SimUnit, order: Dictionary, queue: bool) -> void:
-	if u.broken:
+	if u.broken or u.state == SimUnit.State.EMBARKED:
 		return
 	if not queue:
 		_clear_orders(u)

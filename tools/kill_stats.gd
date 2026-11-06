@@ -14,11 +14,14 @@ func _initialize() -> void:
 	var ais := [ClassicAI.new(0, "hard"), ClassicAI.new(1, "hard")]
 	var killers := [{}, {}]   # team -> killer def -> count of men/vehicles killed
 	var victims := [{}, {}]
+	var counts := {}
 	while w.outcome.is_empty() and w.tick < 36000:
 		for ai in ais:
 			ai.think(w)
 		w.step()
 		for e in w.drain_events():
+			if e["t"] in ["embark", "disembark", "garrison", "bld_collapsed"]:
+				counts[e["t"]] = counts.get(e["t"], 0) + 1
 			if e["t"] == "death" or (e["t"] == "destroyed" and not w.by_id[e["u"]].is_squad() and not e.get("expended", false)):
 				var v: SimUnit = w.by_id[e["u"]]
 				var k: SimUnit = w.by_id.get(e.get("killer", -1))
@@ -26,7 +29,7 @@ func _initialize() -> void:
 				var kt: int = k.team if k != null else 1 - v.team
 				killers[kt][kname] = killers[kt].get(kname, 0) + 1
 				victims[v.team][v.def_id] = victims[v.team].get(v.def_id, 0) + 1
-	print("result: ", w.outcome.get("reason", "timeout"), " at ", int(w.time), "s")
+	print("result: ", w.outcome.get("reason", "timeout"), " at ", int(w.time), "s  events: ", counts)
 	for t in 2:
 		print("team %d (%s) inflicted: %s" % [t, f[t], killers[t]])
 		print("team %d (%s) lost:      %s" % [t, f[t], victims[t]])

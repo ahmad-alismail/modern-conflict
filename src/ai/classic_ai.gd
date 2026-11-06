@@ -37,6 +37,7 @@ var _staging: Dictionary = {}      # objective index -> {"pos": Vector2, "since"
 var _focus := {"id": -1, "t": -99.0}
 var _garrisoned_once: Dictionary = {}
 var _mined: Dictionary = {}
+var _rode: Dictionary = {}         # unit ids already transported once (squads and transports)
 var _spawn := Vector2.ZERO
 var _enemy_spawn := Vector2.ZERO
 var doctrine := "combined"         # "combined" (CDF), "ambush" (PDB), "network" (HAC)
@@ -179,7 +180,15 @@ func _strategic(w: SimWorld) -> void:
 	var known := known_enemies(w)
 	var ground := []
 	var center := Vector2.ZERO
+	_transport_plan(w, mine)
 	for u in mine:
+		if u.state == SimUnit.State.EMBARKED:
+			continue
+		var la: Dictionary = _assign.get(u.id, {})
+		if la.get("kind", "") == "loading" and u.cargo.is_empty() and w.time < la["until"]:
+			continue
+		if la.get("kind", "") == "board" and w.time - la["t"] < 30.0 and u.state != SimUnit.State.EMBARKED:
+			continue
 		var r := role(u)
 		if r in ["inf", "armor", "at", "recon"] and not u.is_air():
 			ground.append(u)
@@ -320,6 +329,48 @@ func _ambush_building(w: SimWorld, obj: Vector2, u: SimUnit) -> int:
 	return best
 
 
+## Early in the battle, load nearby infantry into empty transports so they ride
+## forward under armor; transports unload near their objective or under threat.
+func _transport_plan(w: SimWorld, mine: Array) -> void:
+	if w.time > 90.0 or doctrine == "network":
+		return
+	var taken := {}
+	for tr in mine:
+		var cap: int = tr.def.get("transport", 0)
+		if cap <= 0 or not tr.cargo.is_empty() or tr.mobility >= 2 or _rode.has(tr.id):
+			continue
+		var best: SimUnit = null
+		var bd := 70.0
+		for s in mine:
+			if not s.is_squad() or taken.has(s.id) or _rode.has(s.id) or s.state != SimUnit.State.IDLE or not s.def.get("garrison", false):
+				continue
+			if role(s) != "inf" or s.alive_members() > cap:
+				continue
+			var d: float = s.pos.distance_to(tr.pos)
+			if d < bd:
+				bd = d
+				best = s
+		if best != null:
+			taken[best.id] = true
+			_rode[best.id] = true
+			_rode[tr.id] = true
+			issue(w, {"type": "board", "ids": [best.id], "target": tr.id})
+			issue(w, {"type": "stop", "ids": [tr.id]})
+			_assign[best.id] = {"goal": tr.pos, "kind": "board", "t": w.time}
+			_assign[tr.id] = {"goal": tr.pos, "kind": "loading", "t": w.time, "until": w.time + 25.0, "rider": best.id}
+
+
+func _unload_check(w: SimWorld, u: SimUnit, vis: Array) -> void:
+	if u.cargo.is_empty():
+		return
+	var a: Dictionary = _assign.get(u.id, {})
+	var oi: int = a.get("obj", -1)
+	var near_obj := oi >= 0 and u.pos.distance_to(w.objectives[oi]["p"]) < 42.0 and u.pos.distance_to(_spawn) > 60.0
+	var threat := _nearest(vis, u.pos, 85.0) != null
+	if near_obj or threat or u.hp_frac() < 0.5:
+		issue(w, {"type": "unload", "ids": [u.id]})
+
+
 func _front_point(w: SimWorld, target: Vector2) -> Vector2:
 	return target.lerp(_spawn, 0.3)
 
@@ -384,6 +435,7 @@ func _tactical(w: SimWorld) -> void:
 		if u.is_squad():
 			_squad_tactics(w, u, vis)
 		elif u.cat == Defs.CAT_VEH:
+			_unload_check(w, u, vis)
 			_vehicle_tactics(w, u, vis)
 		elif u.has_special("kamikaze"):
 			_fpv_tactics(w, u, vis)
