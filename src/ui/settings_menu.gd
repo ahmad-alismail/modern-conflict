@@ -79,7 +79,7 @@ func _text(g: GridContainer, text: String, section: String, key: String, secret:
 func _graphics() -> Control:
 	var g := _grid("Graphics")
 	_option(g, "Quality preset", "graphics", "quality", ["Low", "Medium", "High", "Ultra (SDFGI)"], [0, 1, 2, 3])
-	_check(g, "Fullscreen", "graphics", "fullscreen")
+	_check(g, "Fullscreen (F11)", "graphics", "fullscreen")
 	_check(g, "V-Sync", "graphics", "vsync")
 	_slider(g, "Render scale", "graphics", "render_scale", 0.5, 1.0, 0.05)
 	_option(g, "FPS limit", "graphics", "max_fps", ["Unlimited", "30", "60", "120", "144"], [0, 30, 60, 120, 144])

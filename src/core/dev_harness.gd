@@ -30,6 +30,29 @@ func _ready() -> void:
 	_shot_delay = float(args.get("shot-delay", "4"))
 	_quit_after = float(args.get("quit-after", "-1"))
 	set_process(_shot_path != "" or _quit_after > 0.0)
+	if args.has("window-test"):
+		_window_test()
+
+
+## Dev check: report window mode at startup, toggle with F11 twice, report again, quit.
+func _window_test() -> void:
+	await get_tree().create_timer(1.5).timeout
+	_report("startup")
+	for i in 2:
+		var k := InputEventKey.new()
+		k.keycode = KEY_F11
+		k.pressed = true
+		Input.parse_input_event(k)
+		await get_tree().create_timer(1.0).timeout
+		_report("after F11 #%d" % (i + 1))
+	get_tree().quit()
+
+
+func _report(when: String) -> void:
+	var names := {DisplayServer.WINDOW_MODE_WINDOWED: "windowed", DisplayServer.WINDOW_MODE_FULLSCREEN: "fullscreen (borderless)",
+		DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN: "exclusive fullscreen", DisplayServer.WINDOW_MODE_MAXIMIZED: "maximized"}
+	print("[window-test] %s: %s, window %s, screen %s" % [when, names.get(DisplayServer.window_get_mode(), "other"),
+		DisplayServer.window_get_size(), DisplayServer.screen_get_size()])
 
 
 func has_arg(key: String) -> bool:

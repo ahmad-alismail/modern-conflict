@@ -649,6 +649,7 @@ func show_controls() -> void:
 		["Commands", "T attack-move · X stop · H hold position · G leave building · U unload · C smoke · R retreat · V stance · Tab next idle unit · Home center"],
 		["Support", "F1–F4: support powers (then click target) · F5: reinforcements"],
 		["Time", "Space: tactical pause · + / -: game speed · Esc: menu / cancel"],
+		["Window", "F11 or Alt+Enter: toggle fullscreen"],
 		["Tactics", "Infantry in buildings are hard to hit. Tanks fear close-range anti-tank teams. Suppressed troops get pinned and may break. Vehicles are weakest from the sides and rear. Smoke blocks line of sight."],
 	]
 	for r in rows:

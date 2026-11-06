@@ -34,6 +34,7 @@ Run `build/ModernConflict.exe` (after building, see below). Everything works off
 | Commands | T attack-move · X stop · H hold · G leave building · U unload · C smoke · R retreat · V stance |
 | Support | F1–F4 support powers, F5 reinforcements |
 | Time | **Space tactical pause** (give orders while paused) · +/- speed |
+| Window | Starts fullscreen · **F11** or Alt+Enter toggles fullscreen |
 
 ## Building from source
 Requirements: Windows. Godot 4.7.2 and its export templates go in `.tools/` (gitignored):

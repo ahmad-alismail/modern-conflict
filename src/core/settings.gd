@@ -14,7 +14,7 @@ const QUALITY_ULTRA := 3
 const DEFAULTS := {
 	"graphics": {
 		"quality": QUALITY_HIGH,
-		"fullscreen": false,
+		"fullscreen": true,
 		"vsync": true,
 		"render_scale": 1.0,
 		"max_fps": 0,
@@ -104,12 +104,32 @@ func save_settings() -> void:
 func apply_display() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
-	var fs: bool = get_value("graphics", "fullscreen")
-	var mode := DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN if fs else DisplayServer.WINDOW_MODE_WINDOWED
+	var fs: bool = get_value("graphics", "fullscreen") and not _dev_windowed()
+	# borderless fullscreen: instant Alt+Tab, no display mode switch
+	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if fs else DisplayServer.WINDOW_MODE_WINDOWED
 	if DisplayServer.window_get_mode() != mode:
 		DisplayServer.window_set_mode(mode)
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if get_value("graphics", "vsync") else DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = int(get_value("graphics", "max_fps"))
+
+
+## Dev tooling (screenshots, --windowed) always runs in a window.
+func _dev_windowed() -> bool:
+	for a in OS.get_cmdline_user_args():
+		var s := String(a)
+		if s == "--windowed" or s.begins_with("--shot="):
+			return true
+	return false
+
+
+## F11 or Alt+Enter toggles fullscreen anywhere in the game (remembered).
+func _input(event: InputEvent) -> void:
+	var k := event as InputEventKey
+	if k == null or not k.pressed or k.echo:
+		return
+	if k.keycode == KEY_F11 or (k.keycode == KEY_ENTER and k.alt_pressed):
+		set_value("graphics", "fullscreen", not bool(get_value("graphics", "fullscreen")))
+		get_viewport().set_input_as_handled()
 
 
 func quality() -> int:
