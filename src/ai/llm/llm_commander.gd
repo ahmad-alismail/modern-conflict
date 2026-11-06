@@ -41,6 +41,8 @@ const SYSTEM_PROMPT := """You are the battlefield commander of one side in Moder
 
 Coordinates are meters: x grows east, y grows south. Your deployment zone is where retreating units go.
 
+Objectives: any of your ground units (infantry or vehicles) standing inside an objective circle captures it; aircraft cannot. Enemy ground units inside contest it.
+
 Victory: in "vp" mode, holding more objectives than the enemy drains their tickets, and every unit lost costs tickets, so avoid needless losses. In "hold" mode the defender must keep at least one objective until the deadline.
 
 Order actions (unit_ids are YOUR unit ids):

@@ -117,7 +117,7 @@ func _ready() -> void:
 	_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	right.add_child(_preview)
-	var legend := UITheme.label("Blue deploys west, Red deploys east.\nCapture objectives A–E to drain enemy tickets;\nunit losses also cost tickets.", 12, UITheme.TEXT_DIM)
+	var legend := UITheme.label("Blue deploys west, Red deploys east.\nAny ground unit captures objectives A–E to drain enemy tickets;\nunit losses also cost tickets.", 12, UITheme.TEXT_DIM)
 	right.add_child(legend)
 
 	var bottom := HBoxContainer.new()

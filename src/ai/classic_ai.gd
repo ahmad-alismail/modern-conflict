@@ -128,7 +128,7 @@ static func role(u: SimUnit) -> String:
 		return "recon"
 	if u.cat == Defs.CAT_VEH:
 		return "armor"
-	if u.weapons.size() > 0 and u.weapons[0]["def"]["pen"] >= 200.0 and not u.def.get("capture", false):
+	if u.weapons.size() > 0 and u.weapons[0]["def"]["pen"] >= 200.0:
 		return "at"
 	return "inf"
 

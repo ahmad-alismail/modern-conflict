@@ -962,22 +962,24 @@ func has_los_units(viewer: SimUnit, tgt: SimUnit) -> bool:
 
 func _update_objectives(dt: float) -> void:
 	for o in objectives:
-		var counts := [0, 0]
+		var counts := [0.0, 0.0]
 		for u in units_near(o["p"], o["r"] + 4.0):
-			if u.team > 1 or not u.def.get("capture", false) or u.broken or u.state == SimUnit.State.EMBARKED:
+			# every ground unit can capture (vehicles at half speed); aircraft, retreating
+			# and embarked units cannot
+			if u.team > 1 or u.is_air() or u.broken or u.state == SimUnit.State.EMBARKED:
 				continue
-			counts[u.team] += 1
+			counts[u.team] += 1.0 if u.is_squad() else 0.5
 		for bi in _buildings_near(o["p"], o["r"]):
 			for id in buildings[bi]["garrison"]:
 				var gu: SimUnit = by_id.get(id)
 				if gu != null and gu.team <= 1:
-					counts[gu.team] += 1
+					counts[gu.team] += 1.0
 		var prev_owner: int = o["owner"]
 		var rate := 0.0
 		if counts[0] > 0 and counts[1] == 0:
-			rate = 0.035 * mini(counts[0], 3)
+			rate = 0.035 * minf(counts[0], 3.0)
 		elif counts[1] > 0 and counts[0] == 0:
-			rate = -0.035 * mini(counts[1], 3)
+			rate = -0.035 * minf(counts[1], 3.0)
 		o["contested"] = counts[0] > 0 and counts[1] > 0
 		if rate != 0.0:
 			var p: float = o["progress"] + rate * dt
