@@ -115,6 +115,10 @@ func _build_presentation(env: Dictionary) -> void:
 	if audio.has_method("set_ambience"):
 		audio.set_ambience(env.get("weather", "clear"), 0.2)
 	_warm_up_shaders()
+	if DevHarness.has_arg("input-test"):
+		var t: Node = load("res://tools/input_test.gd").new()
+		t.set("session", self)
+		add_child(t)
 	if DevHarness.has_arg("follow"):
 		get_tree().create_timer(1.0).timeout.connect(func():
 			var want := DevHarness.arg("follow")
