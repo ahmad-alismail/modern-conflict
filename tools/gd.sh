@@ -14,7 +14,7 @@ case "$cmd" in
   import) "$GODOT" --headless --path "$ROOT" --import 2>&1 | grep -vE "^\s*$|Godot Engine|^--- Debug" || true ;;
   check)  "$GODOT" --headless --path "$ROOT" -s res://tools/check.gd 2>&1 | grep -E "SCRIPT ERROR|at: GDScript::reload|FAILED|checked" ;;
   test)   "$GODOT" --headless --path "$ROOT" -s res://tests/run_tests.gd -- "--filter=${1:-}" ;;
-  shot)   out="$1"; delay="${2:-4}"; shift 2 || shift $#; mkdir -p "$ROOT/shots"
+  shot)   out="$1"; delay="${2:-4}"; shift 2 || shift $#; mkdir -p "$ROOT/shots"; touch "$ROOT/shots/.gdignore"
           "$GODOT" --path "$ROOT" --resolution 1600x900 -- "--shot=$ROOT/shots/$out" "--shot-delay=$delay" "$@" ;;
   run)    "$GODOT" --path "$ROOT" -- "$@" ;;
   export) mkdir -p "$ROOT/build"; "$GODOT" --headless --path "$ROOT" --export-release "Windows Desktop" "$ROOT/build/ModernConflict.exe" ;;
