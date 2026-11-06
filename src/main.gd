@@ -121,6 +121,11 @@ func _set_screen_quick(kind: String) -> void:
 		cfg = GameConfig.ai_vs_ai(f0, f1, {"controller": "ai", "difficulty": "hard"}, c1, seed_v, opts)
 	else:
 		cfg = GameConfig.skirmish(f0, f1, DevHarness.arg("difficulty", "medium"), seed_v, opts)
+		if DevHarness.has_arg("all-support"):
+			var sup := {}
+			for k in Defs.FACTIONS[f0]["support_options"]:
+				sup[k] = 2
+			cfg["teams"][0]["support"] = sup
 		if kind == "sandbox":
 			cfg["mode"] = "sandbox"
 			cfg["sandbox"] = true

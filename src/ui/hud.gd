@@ -17,7 +17,7 @@ var _pause_banner: PanelContainer
 var _sel_panel: PanelContainer
 var _sel_box: VBoxContainer
 var _cmd_grid: GridContainer
-var _support_box: HBoxContainer
+var _support_box: HFlowContainer
 var _log: VBoxContainer
 var _notice: Label
 var _menu: Control
@@ -48,16 +48,12 @@ func setup(s: GameSession) -> void:
 	_build_log()
 	_build_pause_banner()
 	_notice = UITheme.label("", 20, UITheme.ACCENT)
-	_notice.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_notice.position = Vector2(-200, 110)
-	_notice.size = Vector2(400, 30)
+	UITheme.place(_notice, Control.PRESET_CENTER_TOP, Vector2(-200, 110), Vector2(400, 30))
 	_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_notice)
 	_mode_label = UITheme.label("", 16, UITheme.WARN)
-	_mode_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_mode_label.position = Vector2(-250, -250)
-	_mode_label.size = Vector2(500, 24)
+	UITheme.place(_mode_label, Control.PRESET_CENTER_BOTTOM, Vector2(-250, -250), Vector2(500, 24))
 	_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root.add_child(_mode_label)
 	session.input.selection_changed.connect(func(_ids): _rebuild_selection())
@@ -70,8 +66,7 @@ func setup(s: GameSession) -> void:
 	if has_llm:
 		_build_spectator_panel()
 	_fps = UITheme.label("", 12, UITheme.TEXT_DIM)
-	_fps.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	_fps.position = Vector2(10, 8)
+	UITheme.place(_fps, Control.PRESET_TOP_LEFT, Vector2(10, 8), Vector2(120, 20))
 	root.add_child(_fps)
 	if session.replay.is_empty() and session.sim.tick == 0 and not DevHarness.has_arg("no-briefing"):
 		show_briefing()
@@ -81,9 +76,7 @@ func setup(s: GameSession) -> void:
 
 func _build_top_bar() -> void:
 	var bar := PanelContainer.new()
-	bar.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	bar.position = Vector2(-430, 6)
-	bar.custom_minimum_size = Vector2(860, 0)
+	UITheme.place(bar, Control.PRESET_CENTER_TOP, Vector2(-430, 6), Vector2(860, 0))
 	root.add_child(bar)
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 14)
@@ -155,26 +148,22 @@ func _build_top_bar() -> void:
 
 func _build_bottom() -> void:
 	var mm_panel := PanelContainer.new()
-	mm_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	mm_panel.position = Vector2(8, -278)
+	UITheme.place(mm_panel, Control.PRESET_BOTTOM_LEFT, Vector2(8, -278), Vector2(266, 270))
 	root.add_child(mm_panel)
 	minimap = Minimap.new()
 	minimap.setup(session)
 	mm_panel.add_child(minimap)
 
 	_sel_panel = PanelContainer.new()
-	_sel_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_sel_panel.position = Vector2(-330, -178)
-	_sel_panel.custom_minimum_size = Vector2(560, 170)
+	UITheme.place(_sel_panel, Control.PRESET_CENTER_BOTTOM, Vector2(-330, -178), Vector2(560, 170))
 	root.add_child(_sel_panel)
 	_sel_box = VBoxContainer.new()
 	_sel_panel.add_child(_sel_box)
 
 	var cmd := PanelContainer.new()
 	cmd.visible = session.player_team >= 0
-	cmd.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	cmd.position = Vector2(-372, -238)
-	cmd.custom_minimum_size = Vector2(364, 230)
+	# anchored bottom-right: if its content grows (e.g. many support powers) it grows up/left, never off-screen
+	UITheme.place(cmd, Control.PRESET_BOTTOM_RIGHT, Vector2(-372, -238), Vector2(364, 230))
 	root.add_child(cmd)
 	var vb := VBoxContainer.new()
 	cmd.add_child(vb)
@@ -199,7 +188,9 @@ func _build_bottom() -> void:
 		b.custom_minimum_size = Vector2(112, 28)
 		_cmd_grid.add_child(b)
 	vb.add_child(UITheme.label("SUPPORT", 12, UITheme.TEXT_DIM))
-	_support_box = HBoxContainer.new()
+	_support_box = HFlowContainer.new()   # wraps to a second row when a side has many support powers
+	_support_box.add_theme_constant_override("h_separation", 4)
+	_support_box.add_theme_constant_override("v_separation", 4)
 	vb.add_child(_support_box)
 	_reinforce_btn = UITheme.button("", func(): session.issue({"type": "reinforce"}), "Call the next reinforcement wave [F5]")
 	_reinforce_btn.add_theme_font_size_override("font_size", 12)
@@ -235,9 +226,7 @@ func _fake_key(code: Key) -> InputEventKey:
 
 func _build_log() -> void:
 	_log = VBoxContainer.new()
-	_log.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_log.position = Vector2(12, -470)
-	_log.custom_minimum_size = Vector2(420, 180)
+	UITheme.place(_log, Control.PRESET_BOTTOM_LEFT, Vector2(12, -470), Vector2(420, 180))
 	_log.alignment = BoxContainer.ALIGNMENT_END
 	_log.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_log)
@@ -245,9 +234,7 @@ func _build_log() -> void:
 
 func _build_pause_banner() -> void:
 	_pause_banner = PanelContainer.new()
-	_pause_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_pause_banner.position = Vector2(-260, 78)
-	_pause_banner.custom_minimum_size = Vector2(520, 0)
+	UITheme.place(_pause_banner, Control.PRESET_CENTER_TOP, Vector2(-260, 78), Vector2(520, 0))
 	var l := UITheme.label("TACTICAL PAUSE  —  issue orders, they execute on resume  [Space]", 15, UITheme.WARN)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_pause_banner.add_child(l)
@@ -258,9 +245,7 @@ func _build_pause_banner() -> void:
 
 func _build_spectator_panel() -> void:
 	_llm_panel = PanelContainer.new()
-	_llm_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_llm_panel.position = Vector2(-420, 100)
-	_llm_panel.custom_minimum_size = Vector2(410, 260)
+	UITheme.place(_llm_panel, Control.PRESET_TOP_RIGHT, Vector2(-420, 100), Vector2(410, 260))
 	_llm_label = RichTextLabel.new()
 	_llm_label.bbcode_enabled = true
 	_llm_label.scroll_following = true
@@ -574,9 +559,7 @@ func toggle_menu() -> void:
 		_menu = null
 		return
 	_menu = PanelContainer.new()
-	_menu.set_anchors_preset(Control.PRESET_CENTER)
-	_menu.position = Vector2(-160, -180)
-	_menu.custom_minimum_size = Vector2(320, 0)
+	UITheme.place(_menu, Control.PRESET_CENTER, Vector2(-160, 0), Vector2(320, 0))
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 8)
 	_menu.add_child(vb)
@@ -605,9 +588,7 @@ func toggle_menu() -> void:
 func show_briefing() -> void:
 	var cfg: Dictionary = session.config
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.position = Vector2(-330, -230)
-	panel.custom_minimum_size = Vector2(660, 0)
+	UITheme.place(panel, Control.PRESET_CENTER, Vector2(-330, 0), Vector2(660, 0))
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 10)
 	panel.add_child(vb)
@@ -657,9 +638,7 @@ func show_briefing() -> void:
 
 func show_controls() -> void:
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.position = Vector2(-360, -290)
-	panel.custom_minimum_size = Vector2(720, 0)
+	UITheme.place(panel, Control.PRESET_CENTER, Vector2(-360, 0), Vector2(720, 0))
 	var vb := VBoxContainer.new()
 	panel.add_child(vb)
 	vb.add_child(UITheme.label("CONTROLS", 22, UITheme.ACCENT))
@@ -688,9 +667,7 @@ func show_controls() -> void:
 
 func show_end_screen(outcome: Dictionary) -> void:
 	_end = PanelContainer.new()
-	_end.set_anchors_preset(Control.PRESET_CENTER)
-	_end.position = Vector2(-260, -200)
-	_end.custom_minimum_size = Vector2(520, 0)
+	UITheme.place(_end, Control.PRESET_CENTER, Vector2(-260, 0), Vector2(520, 0))
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 10)
 	_end.add_child(vb)
