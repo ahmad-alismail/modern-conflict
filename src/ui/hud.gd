@@ -349,7 +349,7 @@ func _rebuild_selection() -> void:
 	var ids: Array = session.input.selected
 	if ids.is_empty():
 		_sel_box.add_child(UITheme.label("No units selected", 14, UITheme.TEXT_DIM))
-		var hint := UITheme.label("Left-click / drag to select · Right-click to order · Space = tactical pause\nRight-click building = garrison · Alt+right-click = attack-move · Ctrl+right-click = area fire", 12, UITheme.TEXT_DIM)
+		var hint := UITheme.label("Left-click / drag to select · Right-click to order · Hold right + drag to pan · Space = tactical pause\nRight-click building = garrison · Alt+right-click = attack-move · Ctrl+right-click = area fire", 12, UITheme.TEXT_DIM)
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD
 		_sel_box.add_child(hint)
 		return
@@ -664,7 +664,7 @@ func show_controls() -> void:
 	panel.add_child(vb)
 	vb.add_child(UITheme.label("CONTROLS", 22, UITheme.ACCENT))
 	var rows := [
-		["Camera", "WASD / arrows / screen edge: pan · Mouse wheel: zoom (low zoom = cinematic) · Q/E or middle-drag: rotate · Shift+middle-drag: pan · F: follow unit"],
+		["Camera", "Hold right mouse + drag: pan · WASD / arrows / screen edge: pan · Mouse wheel: zoom (low zoom = cinematic) · Q/E or middle-drag: rotate · F: follow unit"],
 		["Selection", "Left-click: select · Drag: box select · Shift: add/remove · Double-click / Ctrl+click: all of type on screen · Ctrl+1-9: assign group · 1-9: select group (double tap: center)"],
 		["Orders", "Right-click: move / attack enemy / garrison building / board transport · Alt+right-click: attack-move · Ctrl+right-click: area fire (mortars) · Shift: queue orders"],
 		["Commands", "T attack-move · X stop · H hold position · G leave building · U unload · C smoke · R retreat · V stance · Tab next idle unit · Home center"],

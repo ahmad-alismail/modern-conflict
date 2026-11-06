@@ -115,7 +115,10 @@ func _unhandled_input(event: InputEvent) -> void:
 					_left_click(mb.position, mb.shift_pressed, mb.ctrl_pressed)
 				dragging = false
 				box_rect = Rect2()
-		elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+		elif mb.button_index == MOUSE_BUTTON_RIGHT and not mb.pressed:
+			# orders fire on release so that holding + dragging can pan the camera instead
+			if session.cam.rmb_dragged:
+				return
 			if mode != "":
 				set_mode("")
 			else:

@@ -6,6 +6,8 @@ var session: GameSession
 var _t := 0.0
 var _step := 0
 var _results: Array = []
+var _focus_before := Vector3.ZERO
+var _cmds_before := 0
 
 
 func _process(delta: float) -> void:
@@ -54,6 +56,28 @@ func _process(delta: float) -> void:
 				_step = 6
 		6:
 			if _t > 5.6:
+				# hold right mouse + drag: camera pans, no order is issued
+				_focus_before = session.cam._t_focus
+				_cmds_before = session.sim.command_log.size() + session.sim.pending.size()
+				var c := get_viewport().get_visible_rect().size * 0.5
+				_mouse(c, MOUSE_BUTTON_RIGHT, true)
+				for k in range(1, 11):
+					var mm := InputEventMouseMotion.new()
+					mm.position = c + Vector2(k * 25.0, k * 8.0)
+					mm.global_position = mm.position
+					mm.button_mask = MOUSE_BUTTON_MASK_RIGHT
+					Input.parse_input_event(mm)
+				_mouse(c + Vector2(250, 80), MOUSE_BUTTON_RIGHT, false)
+				_step = 7
+		7:
+			if _t > 6.2:
+				var moved: float = session.cam._t_focus.distance_to(_focus_before)
+				_check(moved > 5.0, "right-drag pans the camera (%.1f m)" % moved)
+				var cmds := session.sim.command_log.size() + session.sim.pending.size()
+				_check(cmds == _cmds_before, "right-drag does not issue an order")
+				_step = 8
+		8:
+			if _t > 6.6:
 				print("[input-test] done: %d checks, %d failed" % [_results.size(), _results.count(false)])
 				get_tree().quit()
 

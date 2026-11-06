@@ -21,6 +21,13 @@ var _follow: Node3D
 var _drag_rotate := false
 var _drag_pan := false
 var _last_mouse := Vector2.ZERO
+## Right-button drag pans ("grab the map"). A right click without dragging stays an order;
+## PlayerInput checks `rmb_dragged` on release to tell the two apart.
+var rmb_dragged := false
+var _rmb_down := false
+var _rmb_start := Vector2.ZERO
+var _rmb_last := Vector2.ZERO
+const RMB_DRAG_PX := 6.0
 var _shake := 0.0
 var _shake_t := 0.0
 var _last_us := 0
@@ -92,12 +99,31 @@ func _unhandled_input(event: InputEvent) -> void:
 					dir = -dir
 				_zoom(dir * mb.factor if mb.factor > 0.0 else dir, mb.position)
 			get_viewport().set_input_as_handled()
+		elif mb.button_index == MOUSE_BUTTON_RIGHT:
+			if mb.pressed:
+				_rmb_down = true
+				rmb_dragged = false
+				_rmb_start = mb.position
+				_rmb_last = mb.position
+			else:
+				_rmb_down = false
+				if rmb_dragged:
+					Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 		elif mb.button_index == MOUSE_BUTTON_MIDDLE:
 			_drag_rotate = mb.pressed and not mb.shift_pressed
 			_drag_pan = mb.pressed and mb.shift_pressed
 			_last_mouse = mb.position
 	elif event is InputEventMouseMotion:
 		var mm := event as InputEventMouseMotion
+		if _rmb_down:
+			if not rmb_dragged and mm.position.distance_to(_rmb_start) > RMB_DRAG_PX:
+				rmb_dragged = true
+				_follow = null
+				Input.set_default_cursor_shape(Input.CURSOR_DRAG)
+			if rmb_dragged:
+				_grab_pan(_rmb_last, mm.position)
+				_rmb_last = mm.position
+			return
 		if _drag_rotate:
 			_t_yaw -= mm.relative.x * 0.006 * float(Settings.get_value("gameplay", "rotate_speed"))
 			_t_dist = clampf(_t_dist * (1.0 + mm.relative.y * 0.004), MIN_DIST, MAX_DIST)
@@ -108,6 +134,19 @@ func _unhandled_input(event: InputEvent) -> void:
 			_follow = null
 	elif event is InputEventMagnifyGesture:
 		_zoom((1.0 - (event as InputEventMagnifyGesture).factor) * 4.0, get_viewport().get_mouse_position())
+
+
+## Move the camera so the ground point under `from` ends up under `to` (map follows the cursor).
+func _grab_pan(from: Vector2, to: Vector2) -> void:
+	var a = ground_point(from)
+	var b = ground_point(to)
+	if a == null or b == null:
+		return
+	var d: Vector3 = a - b
+	d.y = 0.0
+	_t_focus += d
+	focus += d
+	_apply()
 
 
 func _zoom(amount: float, mouse: Vector2) -> void:

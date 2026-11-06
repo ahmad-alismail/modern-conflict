@@ -28,7 +28,7 @@ Run `build/ModernConflict.exe` (after building, see below). Everything works off
 
 | | |
 |---|---|
-| Camera | WASD / arrows / screen edge pan · wheel zoom (zooming in lowers the camera to a cinematic angle) · Q/E or middle-drag rotate · F follow |
+| Camera | **hold right mouse + drag to pan** · WASD / arrows / screen edge pan · wheel zoom (zooming in lowers the camera to a cinematic angle) · Q/E or middle-drag rotate · F follow |
 | Select | Left-click, drag box, Shift add, double-click for all of a type, Ctrl+1–9 groups |
 | Orders | Right-click: move / attack / garrison a building / board a transport · Alt+right-click attack-move · Ctrl+right-click area fire · Shift queues |
 | Commands | T attack-move · X stop · H hold · G leave building · U unload · C smoke · R retreat · V stance |
