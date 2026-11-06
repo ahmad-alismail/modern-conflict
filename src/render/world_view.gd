@@ -87,6 +87,7 @@ func _add_unit_view(u: SimUnit) -> void:
 func _build_objectives() -> void:
 	var mat := ShaderMaterial.new()
 	mat.shader = preload("res://src/render/shaders/objective.gdshader")
+	mat.render_priority = 9
 	for o in sim.objectives:
 		var root := Node3D.new()
 		root.position = Vector3(o["p"].x, 0.12, o["p"].y)

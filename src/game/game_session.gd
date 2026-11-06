@@ -83,8 +83,14 @@ func _build_presentation(env: Dictionary) -> void:
 	var size := sim.map.size_m()
 	var start_team := maxi(player_team, 0)
 	var sp := sim.map.team_spawn(start_team).get_center()
+	var own := sim.team_units(start_team)
+	if not own.is_empty():
+		var c := Vector2.ZERO
+		for u in own:
+			c += u.pos
+		sp = c / own.size()
 	var toward := (size * 0.5 - sp).normalized()
-	cam.setup(Rect2(Vector2.ZERO, size), Vector3(sp.x, 0, sp.y) + Vector3(toward.x, 0, toward.y) * 30.0, toward.angle(), float(DevHarness.arg("cam-dist", "120")))
+	cam.setup(Rect2(Vector2.ZERO, size), Vector3(sp.x, 0, sp.y) + Vector3(toward.x, 0, toward.y) * 12.0, toward.angle(), float(DevHarness.arg("cam-dist", "120")))
 	cam.view_changed.connect(_on_view_changed)
 	env_rig.follow(cam.camera)
 	view.fog.attach_to_camera(cam.camera)
@@ -104,6 +110,25 @@ func _build_presentation(env: Dictionary) -> void:
 		panel.setup(self)
 	if audio.has_method("set_ambience"):
 		audio.set_ambience(env.get("weather", "clear"), 0.2)
+	_warm_up_shaders()
+
+
+## Draw one of every unit model (and its wreck) for a moment behind the loading overlay,
+## so shader compilation does not hitch when a new unit type first appears mid-battle.
+func _warm_up_shaders() -> void:
+	var warm := Node3D.new()
+	add_child(warm)
+	var i := 0
+	var f := cam.focus
+	for id in Defs.UNITS:
+		var m := UnitModels.create(id, Color.WHITE)
+		m.position = f + Vector3((i % 6) * 3.0 - 7.5, 0.0, (i / 6) * 3.0 - 7.5)
+		warm.add_child(m)
+		var wr := UnitModels.create_wreck(id)
+		wr.position = m.position + Vector3(0, 0, 1.5)
+		warm.add_child(wr)
+		i += 1
+	get_tree().create_timer(0.4).timeout.connect(warm.queue_free)
 
 
 func _setup_commanders() -> void:

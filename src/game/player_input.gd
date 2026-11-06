@@ -509,6 +509,7 @@ func _marker(p: Vector3, col: Color, radius: float = 2.0) -> void:
 	var mat := ShaderMaterial.new()
 	mat.shader = preload("res://src/render/shaders/ring.gdshader")
 	mat.set_shader_parameter("color", col)
+	mat.render_priority = 10
 	mi.material_override = mat
 	mi.position = p
 	mi.scale = Vector3.ONE * radius * 2.0

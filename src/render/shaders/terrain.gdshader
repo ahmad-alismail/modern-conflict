@@ -9,10 +9,10 @@ uniform sampler2D noise_a : filter_linear_mipmap, repeat_enable;
 uniform sampler2D noise_b : filter_linear_mipmap, repeat_enable;
 uniform vec2 map_size = vec2(480.0);
 
-const vec3 SAND = vec3(0.70, 0.60, 0.46);
-const vec3 DIRT = vec3(0.55, 0.46, 0.35);
+const vec3 SAND = vec3(0.62, 0.53, 0.41);
+const vec3 DIRT = vec3(0.49, 0.41, 0.31);
 const vec3 ROAD = vec3(0.22, 0.22, 0.23);
-const vec3 PAVED = vec3(0.62, 0.59, 0.54);
+const vec3 PAVED = vec3(0.55, 0.52, 0.48);
 const vec3 GRASS = vec3(0.30, 0.36, 0.17);
 const vec3 FIELD = vec3(0.47, 0.44, 0.25);
 const vec3 RUBBLE = vec3(0.52, 0.49, 0.45);

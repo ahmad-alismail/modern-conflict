@@ -45,6 +45,7 @@ func setup(unit: SimUnit, sim: SimWorld, color: Color, corpses: Node3D) -> void:
 	ring.visible = false
 	var rm := ShaderMaterial.new()
 	rm.shader = preload("res://src/render/shaders/ring.gdshader")
+	rm.render_priority = 10
 	ring.material_override = rm
 	add_child(ring)
 	_place(1.0)
