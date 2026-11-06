@@ -505,14 +505,13 @@ func _decorate_streets() -> void:
 func _place_building(r: Rect2, floors: int, style: int) -> void:
 	if r.size.x < 5.0 or r.size.y < 5.0:
 		return
-	# war damage: some buildings are already ruins
-	if style != MapDef.S_MOSQUE and rng.chance(_war * 0.22):
-		m.fill_rect_terrain(r, MapDef.T_RUBBLE)
-		_add_prop("rubble", r.get_center(), rng.range_f(0, TAU), clampf(minf(r.size.x, r.size.y) / 4.0, 1.0, 3.0))
-		if rng.chance(0.5):
-			m.buildings.append(_bdict(r, 1, MapDef.S_UNFINISHED))
-		return
-	m.buildings.append(_bdict(r, floors, style))
+	# war damage: some buildings are already ruins, more are battle-scarred
+	var b := _bdict(r, floors, style)
+	if style != MapDef.S_MOSQUE and rng.chance(_war * 0.18):
+		b["ruined"] = true
+	elif rng.chance(_war * 0.35):
+		b["damaged"] = true
+	m.buildings.append(b)
 
 
 func _bdict(r: Rect2, floors: int, style: int) -> Dictionary:

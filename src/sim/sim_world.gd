@@ -61,6 +61,13 @@ func setup(scenario: Dictionary) -> void:
 		if b["style"] == MapDef.S_MOSQUE:
 			mhp *= 1.5
 		buildings.append({"hp": mhp, "max_hp": mhp, "state": 0, "garrison": []})
+		if b.get("ruined", false):
+			buildings[-1]["state"] = 2
+			buildings[-1]["hp"] = 0.0
+			nav.collapse_building(buildings.size() - 1)
+		elif b.get("damaged", false):
+			buildings[-1]["state"] = 1
+			buildings[-1]["hp"] = mhp * 0.45
 	for o in map.objectives:
 		var owner := -1
 		var prog := 0.0

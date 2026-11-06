@@ -18,7 +18,9 @@ func _ready() -> void:
 	add_child(terrain)
 	terrain.build(m)
 	for b in m.buildings:
-		var n := BuildingBuilder.build(b)
+		var n := BuildingBuilder.build_ruin(b) if b.get("ruined", false) else BuildingBuilder.build(b)
+		if b.get("damaged", false):
+			BuildingBuilder.apply_damage(n, 1)
 		n.position = Vector3(b["c"].x, 0, b["c"].y)
 		n.rotation.y = -b["rot"]
 		add_child(n)

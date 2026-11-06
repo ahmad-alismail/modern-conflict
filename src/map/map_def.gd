@@ -210,8 +210,12 @@ static func _to_r2(a: Array) -> Rect2:
 func to_dict() -> Dictionary:
 	var bl := []
 	for b in buildings:
-		bl.append({"id": b["id"], "c": _v2(b["c"]), "size": _v2(b["size"]), "rot": snappedf(b["rot"], 0.0001),
-			"floors": b["floors"], "style": b["style"], "color": b["color"], "seed": b["seed"]})
+		var bd := {"id": b["id"], "c": _v2(b["c"]), "size": _v2(b["size"]), "rot": snappedf(b["rot"], 0.0001),
+			"floors": b["floors"], "style": b["style"], "color": b["color"], "seed": b["seed"]}
+		for flag in ["ruined", "damaged"]:
+			if b.get(flag, false):
+				bd[flag] = true
+		bl.append(bd)
 	var wl := []
 	for w in walls:
 		wl.append({"a": _v2(w["a"]), "b": _v2(w["b"]), "h": w["h"], "kind": w["kind"]})
@@ -244,8 +248,12 @@ static func from_dict(d: Dictionary) -> MapDef:
 	if t.size() == m.width * m.height:
 		m.terrain = t
 	for b in d.get("buildings", []):
-		m.buildings.append({"id": int(b["id"]), "c": _to_v2(b["c"]), "size": _to_v2(b["size"]), "rot": float(b["rot"]),
-			"floors": int(b["floors"]), "style": int(b["style"]), "color": int(b["color"]), "seed": int(b["seed"])})
+		var nb := {"id": int(b["id"]), "c": _to_v2(b["c"]), "size": _to_v2(b["size"]), "rot": float(b["rot"]),
+			"floors": int(b["floors"]), "style": int(b["style"]), "color": int(b["color"]), "seed": int(b["seed"])}
+		for flag in ["ruined", "damaged"]:
+			if b.get(flag, false):
+				nb[flag] = true
+		m.buildings.append(nb)
 	for w in d.get("walls", []):
 		m.walls.append({"a": _to_v2(w["a"]), "b": _to_v2(w["b"]), "h": float(w["h"]), "kind": int(w["kind"])})
 	for p in d.get("props", []):
