@@ -39,6 +39,7 @@ var _garrisoned_once: Dictionary = {}
 var _mined: Dictionary = {}
 var _spawn := Vector2.ZERO
 var _enemy_spawn := Vector2.ZERO
+var doctrine := "combined"         # "combined" (CDF), "ambush" (PDB), "network" (HAC)
 
 
 func _init(p_team: int, p_difficulty: String) -> void:
@@ -54,6 +55,9 @@ func think(w: SimWorld) -> void:
 		return
 	if _initial_strength <= 0.0:
 		_spawn = w.map.team_spawn(team).get_center()
+		match w.teams[team]["faction"]:
+			"pdb": doctrine = "ambush"
+			"hac": doctrine = "network"
 		_enemy_spawn = w.map.team_spawn(1 - team).get_center()
 		_initial_strength = _strength(w.team_units(team))
 		_strat_t = rng.range_f(0.5, 2.0)
@@ -255,6 +259,16 @@ func _send_to_objective(w: SimWorld, u: SimUnit, t: Dictionary, known: Array) ->
 	elif r == "recon":
 		var back := (_spawn - goal).normalized()
 		goal = goal + back * 85.0 + Vector2(-back.y, back.x) * rng.range_f(-30, 30)
+	elif doctrine == "ambush" and u.is_squad() and (t["enemy"] > 6.0 or o["owner"] == team or r == "at"):
+		# light forces fight from buildings around the objective instead of crossing open ground
+		var bi := _ambush_building(w, o["p"], u)
+		if bi >= 0:
+			if u.garrison_bld != bi:
+				var a: Dictionary = _assign.get(u.id, {})
+				if a.get("kind", "") != "ambush" or a.get("bld", -1) != bi or u.orders.is_empty() and u.state != SimUnit.State.GARRISONED:
+					_assign[u.id] = {"goal": w.map.buildings[bi]["c"], "kind": "ambush", "t": w.time, "obj": oi, "bld": bi}
+					issue(w, {"type": "garrison", "ids": [u.id], "bld": bi})
+			return
 	else:
 		var off := Vector2.from_angle(u.id * 2.39996) * rng.range_f(0.0, o["r"] * 0.8)
 		goal += off
@@ -282,6 +296,28 @@ func _send_to_objective(w: SimWorld, u: SimUnit, t: Dictionary, known: Array) ->
 				return
 	_order(w, u, "obj", w.nav.nearest_open_point(u.move_class, goal), "attack_move")
 	_assign[u.id]["obj"] = oi
+
+
+## A free building near the objective, preferring ones facing the enemy approach.
+func _ambush_building(w: SimWorld, obj: Vector2, u: SimUnit) -> int:
+	if u.garrison_bld >= 0 and w.building_distance(u.garrison_bld, obj) < 60.0:
+		return u.garrison_bld
+	var toward_enemy := (_enemy_spawn - obj).normalized()
+	var best := -1
+	var best_s := -INF
+	for bi in w.buildings.size():
+		var bs: Dictionary = w.buildings[bi]
+		if bs["state"] == 2 or bs["garrison"].size() >= w.building_capacity(bi):
+			continue
+		var c: Vector2 = w.map.buildings[bi]["c"]
+		var d := c.distance_to(obj)
+		if d > 60.0:
+			continue
+		var s := -d * 0.4 + (c - obj).normalized().dot(toward_enemy) * 12.0 - c.distance_to(u.pos) * 0.05
+		if s > best_s:
+			best_s = s
+			best = bi
+	return best
 
 
 func _front_point(w: SimWorld, target: Vector2) -> Vector2:
@@ -473,7 +509,11 @@ func _at_response(w: SimWorld, mine: Array, vis: Array) -> void:
 			if not is_at(u) or u.broken or not u.orders.is_empty() and u.current_order().get("o", "") == "attack":
 				continue
 			var d: float = u.pos.distance_to(e.pos)
-			if d < 190.0 and d > 20.0:
+			var reach := 190.0
+			if u.is_squad() and u.weapons[0]["def"]["range"] < 90.0:
+				# short-range AT waits for armor to come close instead of charging it
+				reach = 75.0 if doctrine == "ambush" else 110.0
+			if d < reach and d > 20.0:
 				issue(w, {"type": "attack", "ids": [u.id], "target": e.id})
 				_assign.erase(u.id)
 				break

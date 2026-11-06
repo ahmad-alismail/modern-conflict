@@ -37,9 +37,11 @@ func _on_navigate(screen: String, params: Dictionary) -> void:
 		"menu":
 			_set_screen(MainMenu.new())
 		"game":
+			await _show_loading(params)
 			var s := GameSession.new()
 			_set_screen(s)
 			s.start(params)
+			_hide_loading()
 		"editor":
 			_set_screen(MapEditor.new())
 		"skirmish", "aivai":
@@ -51,6 +53,50 @@ func _on_navigate(screen: String, params: Dictionary) -> void:
 				_set_screen(MainMenu.new())
 
 
+var _loading: CanvasLayer
+
+
+func _show_loading(params: Dictionary) -> void:
+	if _screen and is_instance_valid(_screen):
+		_screen.queue_free()
+		_screen = null
+	_loading = CanvasLayer.new()
+	_loading.layer = 40
+	var bg := ColorRect.new()
+	bg.color = Color(0.05, 0.055, 0.05)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_loading.add_child(bg)
+	var vb := VBoxContainer.new()
+	vb.set_anchors_preset(Control.PRESET_CENTER)
+	vb.position = Vector2(-300, -60)
+	vb.custom_minimum_size = Vector2(600, 0)
+	var title := UITheme.label(String(params.get("title", "Preparing the battlefield")), 30, UITheme.ACCENT)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vb.add_child(title)
+	var tips := ["Infantry inside buildings are far harder to hit — and to see.", "Tanks are weakest from the sides, rear and above.",
+		"Suppressed squads get pinned; broken squads run for the rear.", "Smoke blocks line of sight for both sides.",
+		"Every unit you lose costs tickets. Retreat is not defeat.", "Press Space for tactical pause and plan your next move.",
+		"Helix robots lose accuracy when cut off from their network.", "Thermal sights see through darkness and thin smoke."]
+	var tip := UITheme.label(tips[randi() % tips.size()], 15, UITheme.TEXT_DIM)
+	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vb.add_child(tip)
+	_loading.add_child(vb)
+	add_child(_loading)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+
+func _hide_loading() -> void:
+	if _loading:
+		var l := _loading
+		_loading = null
+		var tw := create_tween()
+		for c in l.get_children():
+			if c is CanvasItem:
+				tw.parallel().tween_property(c, "modulate:a", 0.0, 0.6)
+		tw.tween_callback(l.queue_free)
+
+
 func _set_screen_quick(kind: String) -> void:
 	var seed_v := int(DevHarness.arg("seed", "7"))
 	var opts := {"tod": DevHarness.arg("tod", "day"), "weather": DevHarness.arg("weather", "clear")}
@@ -58,7 +104,16 @@ func _set_screen_quick(kind: String) -> void:
 	var f1 := DevHarness.arg("enemy", "pdb")
 	var cfg: Dictionary
 	if kind == "aivai":
-		cfg = GameConfig.ai_vs_ai(f0, f1, {"controller": "ai", "difficulty": "hard"}, {"controller": "ai", "difficulty": "hard"}, seed_v, opts)
+		var c1 := {"controller": "ai", "difficulty": "hard"}
+		var llm := DevHarness.arg("llm")   # e.g. ollama:qwen3.5:9b (session only, not saved)
+		if llm != "":
+			var prov := llm.get_slice(":", 0)
+			var model := llm.substr(prov.length() + 1)
+			Settings.set_value("llm", "enabled", true, false)
+			Settings.set_value("llm", "provider", prov, false)
+			Settings.set_value("llm", prov + "_model" if prov != "openai_compat" else "openai_model", model, false)
+			c1 = {"controller": "llm"}
+		cfg = GameConfig.ai_vs_ai(f0, f1, {"controller": "ai", "difficulty": "hard"}, c1, seed_v, opts)
 	else:
 		cfg = GameConfig.skirmish(f0, f1, DevHarness.arg("difficulty", "medium"), seed_v, opts)
 	_on_navigate("game", cfg)

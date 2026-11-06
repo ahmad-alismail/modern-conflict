@@ -57,12 +57,17 @@ func setup(scenario: Dictionary) -> void:
 	env = scenario.get("env", env).duplicate()
 	for b in map.buildings:
 		var area: float = b["size"].x * b["size"].y
-		var mhp := clampf(area * b["floors"] * 4.0, 500.0, 9000.0)
+		var mhp := clampf(area * b["floors"] * 12.0, 1500.0, 24000.0)
 		if b["style"] == MapDef.S_MOSQUE:
 			mhp *= 1.5
 		buildings.append({"hp": mhp, "max_hp": mhp, "state": 0, "garrison": []})
 	for o in map.objectives:
-		objectives.append({"id": o["id"], "name": o["name"], "p": o["p"], "r": o["r"], "owner": -1, "progress": 0.0})
+		var owner := -1
+		var prog := 0.0
+		if mode == "hold" and hold_team >= 0:
+			owner = hold_team
+			prog = 1.0 if hold_team == 0 else -1.0
+		objectives.append({"id": o["id"], "name": o["name"], "p": o["p"], "r": o["r"], "owner": owner, "progress": prog})
 	var tickets: int = scenario.get("tickets", 500)
 	var tdefs: Array = scenario["teams"]
 	for ti in tdefs.size():
@@ -1008,7 +1013,7 @@ func _check_victory() -> void:
 		if teams[ti]["tickets"] <= 0.0 and mode == "vp":
 			_end(other, "%s ran out of tickets" % teams[ti]["name"])
 			return
-		if alive_count[ti] == 0 and teams[ti]["waves"].is_empty():
+		if alive_count[ti] == 0 and teams[ti]["waves"].is_empty() and not _reinforcements_inbound(ti):
 			_end(other, "%s was annihilated" % teams[ti]["name"])
 			return
 	if mode == "hold" and hold_team >= 0 and time_limit > 0.0:
@@ -1025,6 +1030,13 @@ func _check_victory() -> void:
 		else:
 			var w := 0 if teams[0]["tickets"] >= teams[1]["tickets"] else 1
 			_end(w, "Time limit reached")
+
+
+func _reinforcements_inbound(team: int) -> bool:
+	for s in strikes:
+		if s["power"] == "reinforce" and s["team"] == team:
+			return true
+	return false
 
 
 func _end(winner: int, reason: String) -> void:

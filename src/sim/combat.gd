@@ -40,7 +40,9 @@ static func can_target(wd: Dictionary, t: SimUnit) -> bool:
 	return (int(wd["targets"]) & t.target_mask()) != 0
 
 
-static func effectiveness(wd: Dictionary, t: SimUnit) -> float:
+## Expected value of firing weapon wd at t. With `from` given, vehicle armor is
+## taken from the side actually exposed to the shooter (front / side / rear).
+static func effectiveness(wd: Dictionary, t: SimUnit, from: Vector2 = Vector2.INF) -> float:
 	if not can_target(wd, t):
 		return 0.0
 	var e := 0.0
@@ -51,7 +53,11 @@ static func effectiveness(wd: Dictionary, t: SimUnit) -> float:
 		if wd["pen"] >= 200.0:
 			e *= 0.3
 	else:
-		var armor: float = t.def["armor"][3 if wd.get("top_attack", false) else 1]
+		var idx := 3 if wd.get("top_attack", false) else 1
+		if idx == 1 and from != Vector2.INF and not t.is_air():
+			var rel := absf(angle_difference(t.facing, (from - t.pos).angle()))
+			idx = 0 if rel < PI * 0.25 else (2 if rel > PI * 0.75 else 1)
+		var armor: float = t.def["armor"][idx]
 		var p := p_pen(wd["pen"], armor)
 		if p <= 0.01:
 			return 0.0
@@ -90,7 +96,7 @@ static func _acquire(w: SimWorld, u: SimUnit, ws: Dictionary) -> int:
 		var d := w.unit_origin(u, t.pos).distance_to(t.pos)
 		if d > rng_max or d < wd.get("min_range", 0.0):
 			continue
-		var e := effectiveness(wd, t)
+		var e := effectiveness(wd, t, u.pos)
 		if e <= 0.0:
 			continue
 		var score: float = e * (0.5 + t.def["points"] / 20.0) / (1.0 + d / rng_max)
@@ -408,16 +414,15 @@ static func _impact(w: SimWorld, p: Dictionary) -> void:
 	var t: SimUnit = w.by_id.get(p["target"]) if p["target"] >= 0 else null
 	if p["hit"] and t != null and t.alive and t.state != SimUnit.State.EMBARKED:
 		var from2 := Vector2(p["from"].x, p["from"].z)
-		if t.state == SimUnit.State.GARRISONED and wd.get("splash", 0.0) > 0.0:
-			damage_building(w, t.garrison_bld, wd["damage"] * 0.5, src)
 		apply_damage(w, src, wd, t, from2, wd.get("top_attack", false), 1.0)
 		hit_veh = t.cat != Defs.CAT_INF
 	var bi := _building_hit(w, p2)
 	if bi >= 0 and wd.get("splash", 0.0) > 0.0:
-		var f := 1.0
+		var f := 0.8
 		match int(wd["proj"]):
-			Defs.P_ROCKET: f = 0.8
-			Defs.P_MISSILE: f = 0.6
+			Defs.P_SHELL: f = 0.5
+			Defs.P_ROCKET: f = 0.6
+			Defs.P_MISSILE: f = 0.5
 			Defs.P_BOMB: f = 1.5
 		damage_building(w, bi, wd["damage"] * f, src)
 	if to.y < 4.0 or p["kind"] == Defs.P_MORTAR:
@@ -521,7 +526,7 @@ static func damage_member(w: SimWorld, t: SimUnit, mi: int, dmg: float, src: Sim
 		if t.loadout_slot.size() > mi:
 			var si := t.loadout_slot[mi]
 			t.weapons[si]["holders"] = maxi(0, t.weapons[si]["holders"] - 1)
-		w.emit({"t": "death", "u": t.id, "m": mi})
+		w.emit({"t": "death", "u": t.id, "m": mi, "killer": src.id if src != null else -1})
 		w.on_member_lost(t)
 		if t.alive_members() == 0:
 			destroy_unit(w, t, src.id if src != null else -1)
@@ -600,7 +605,7 @@ static func damage_building(w: SimWorld, bi: int, dmg: float, src: SimUnit) -> v
 			u.pos = w.nav.nearest_open_point(Defs.MOVE_FOOT, u.pos)
 			u.prev_pos = u.pos
 			for i in u.members_hp.size():
-				if u.members_hp[i] > 0.0 and w.rng.chance(0.55):
+				if u.members_hp[i] > 0.0 and w.rng.chance(0.4):
 					damage_member(w, u, i, 999.0, src)
 			if u.alive:
 				w.add_suppression(u, 100.0, src)
@@ -645,7 +650,7 @@ static func destroy_unit(w: SimWorld, u: SimUnit, killer_id: int, expended: bool
 		w.wrecks.append({"p": u.pos, "def": u.def_id, "facing": u.facing, "turret": u.turret, "burn": 40.0})
 		w.nav.add_wreck(u.pos, u.def["radius"] * 0.6)
 		splash(w, null, {"damage": 90.0, "pen": 10.0, "splash": 6.0, "suppress": 40.0}, u.pos, 1.0)
-	w.emit({"t": "destroyed", "u": u.id, "wreck": wreck, "air": u.is_air(), "expended": expended})
+	w.emit({"t": "destroyed", "u": u.id, "wreck": wreck, "air": u.is_air(), "expended": expended, "killer": killer_id})
 	if u.cat != Defs.CAT_INF and not expended:
 		w.message("%s destroyed" % u.def["name"], u.team, "alert")
 	elif u.cat == Defs.CAT_INF:

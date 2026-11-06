@@ -83,7 +83,7 @@ func _init(p_team: int, p_session) -> void:
 		_log("LLM commander unavailable (%s); classic AI is in command." % _disabled_reason)
 	elif session != null:
 		_http = HTTPRequest.new()
-		_http.timeout = 90.0
+		_http.timeout = 120.0
 		session.add_child(_http)
 		_http.request_completed.connect(_on_response)
 		_log("LLM commander online (%s · %s)" % [_provider, _model()])
@@ -118,10 +118,9 @@ func _model() -> String:
 
 
 func _log(text: String) -> void:
+	print("[LLM team %d] %s" % [team, text])
 	if session != null and session.hud != null and session.hud.has_method("commander_log"):
 		session.hud.commander_log(team, text)
-	else:
-		print("[LLM team %d] %s" % [team, text])
 
 
 func using_fallback() -> bool:
@@ -179,7 +178,8 @@ func _send(obs: Dictionary) -> void:
 		_:
 			url = String(Settings.get_value("llm", "ollama_url")).trim_suffix("/") + "/api/chat"
 			body = {
-				"model": _model(), "stream": false, "format": ORDER_SCHEMA,
+				"model": _model(), "stream": false, "format": ORDER_SCHEMA, "think": false,
+				"options": {"num_ctx": 16384}, "keep_alive": "15m",
 				"messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_text}],
 			}
 	var err := _http.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(body))

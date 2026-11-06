@@ -252,7 +252,7 @@ func _on_shot(e: Dictionary) -> void:
 	var dir := (to - from).normalized()
 	var heavy := wid in ["hmg", "hmg_team", "autocannon30", "autocannon25", "heli_cannon"]
 	if shooter_vis and _near_camera(from, 260.0):
-		fx.muzzle_flash(from, dir, 1.6 if heavy else 0.8)
+		fx.muzzle_flash(from, dir, 1.0 if heavy else 0.45)
 	var tracer_every := 1 if heavy or wid in ["lmg", "gpmg", "coax", "robot_mg"] else 3
 	if (e.get("tgt", 0) + int(to.x * 10.0)) % tracer_every == 0:
 		var col: Color = TRACER_COLORS.get(u.team if u else 0, Color(1, 0.8, 0.4))
