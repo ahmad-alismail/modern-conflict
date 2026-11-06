@@ -38,6 +38,7 @@ func build(m: MapDef) -> void:
 	ground.material_override = _mat
 	ground.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(ground)
+	_build_water()
 	_build_outskirts()
 
 
@@ -49,6 +50,7 @@ static func _splat_color(t: int) -> Color:
 		MapDef.T_FIELD: return Color(0, 0, 0.5, 0)
 		MapDef.T_RUBBLE: return Color(0, 0, 0, 1)
 		MapDef.T_DIRT: return Color(0, 0, 0.12, 0)
+		MapDef.T_WATER: return Color(0, 0, 0.12, 0.35)   # muddy banks under the water surface
 		_: return Color(0, 0, 0, 0)
 
 
@@ -142,6 +144,33 @@ func _blot(img: Image, p: Vector2, s: float, r_m: float, col: Color) -> void:
 			if x >= 0 and y >= 0 and x < MARK_RES and y < MARK_RES:
 				var e := img.get_pixel(x, y)
 				img.set_pixel(x, y, Color(e.r, e.g, maxf(e.b, col.b * (1.0 - d)), 1))
+
+
+## Water surface over T_WATER cells (canals, ponds, rivers from the editor / importer).
+func _build_water() -> void:
+	var kit := MeshKit.new()
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://src/render/shaders/water.gdshader")
+	mat.set_shader_parameter("noise_tex", _noise_tex(9, 0.03, 3))
+	var c := MapDef.CELL
+	var any := false
+	for y in map.height:
+		var x := 0
+		while x < map.width:
+			if map.terrain[y * map.width + x] != MapDef.T_WATER:
+				x += 1
+				continue
+			var x0 := x
+			while x < map.width and map.terrain[y * map.width + x] == MapDef.T_WATER:
+				x += 1
+			var a := Vector3(x0 * c, 0.06, y * c)
+			var b := Vector3(x * c, 0.06, y * c)
+			kit.quad(mat, Vector3(a.x, a.y, a.z + c), Vector3(b.x, b.y, b.z + c), b, a)
+			any = true
+	if any:
+		var mi := kit.to_instance(false)
+		mi.name = "Water"
+		add_child(mi)
 
 
 ## Low-detail city silhouettes beyond the playable edge so the horizon reads as a city.
