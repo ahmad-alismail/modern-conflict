@@ -56,7 +56,7 @@ func setup(map_bounds: Rect2, start: Vector3, start_yaw: float, start_dist: floa
 
 func pitch_for(d: float) -> float:
 	var t := clampf((d - MIN_DIST) / (MAX_DIST - MIN_DIST), 0.0, 1.0)
-	return deg_to_rad(lerpf(17.0, 62.0, pow(t, 0.55)))
+	return deg_to_rad(lerpf(9.0, 62.0, pow(t, 0.5)))
 
 
 func look_at_point(p: Vector3, d: float = -1.0) -> void:

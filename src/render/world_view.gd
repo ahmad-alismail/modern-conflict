@@ -23,6 +23,7 @@ var _mine_nodes: Array = []
 var _shake_cb: Callable
 var _sound_rate: Dictionary = {}
 var camera_pos := Vector3.ZERO
+var _damage_fx_t := 0.0
 
 
 func setup(world: SimWorld, p_team: int, p_fx: Effects, p_audio: Node) -> void:
@@ -142,6 +143,10 @@ func sync(alpha: float, delta: float) -> void:
 		v.update_view(alpha, delta, vis)
 	_sync_projectiles()
 	_sync_objectives(delta)
+	_damage_fx_t -= delta
+	if _damage_fx_t <= 0.0 and delta > 0.0:
+		_damage_fx_t = 0.12
+		_emit_damage_fx()
 	if fog:
 		fog.update(delta)
 
@@ -190,6 +195,28 @@ func _sync_objectives(delta: float) -> void:
 		var flag: Node3D = on["flag"]
 		flag.position.y = lerpf(1.2, 8.2, absf(prog) if o["owner"] < 0 else 1.0)
 		flag.rotation.y += delta * 0.3
+
+
+## Damaged vehicles trail smoke, burning ones show flames: visible equipment damage.
+func _emit_damage_fx() -> void:
+	if not fx.has_method("emit_smoke"):
+		return
+	for v: UnitView in unit_views.values():
+		var u := v.u
+		if u.cat != Defs.CAT_VEH or not v.model.visible:
+			continue
+		var f := u.hp_frac()
+		if f > 0.55 and u.burn_t <= 0.0 and u.mobility == 0:
+			continue
+		if camera_pos.distance_squared_to(v.global_position) > 300.0 * 300.0:
+			continue
+		var top: Vector3 = v.global_position + Vector3(0, v.model.top_height() * 0.75, 0) - v.global_transform.basis.x * u.def["radius"] * 0.35
+		var dark := clampf(1.0 - f, 0.3, 0.9)
+		fx.emit_smoke(top, Vector3(randf_range(-0.3, 0.3), 1.4 + dark, randf_range(-0.3, 0.3)), Color(0.12, 0.11, 0.1, 0.35 + dark * 0.4),
+			4.0 + dark * 3.0, 0.8, 3.0 + dark * 3.0, 1.0, 0.6, 1.0)
+		if u.burn_t > 0.0 or f < 0.25:
+			fx.emit_glow(top + Vector3(randf_range(-0.4, 0.4), -0.2, randf_range(-0.4, 0.4)), Vector3(0, 1.6, 0), Color(1.0, 0.45, 0.12, 2.2),
+				0.5, 0.9, 0.2, 0, 0, 0.0, 0.5, 0.0, 0.6, 0.8)
 
 
 func set_paused(p: bool) -> void:

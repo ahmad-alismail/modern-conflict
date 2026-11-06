@@ -204,7 +204,8 @@ func set_conditions(tod: String, wx: String) -> void:
 	sky_mat.sun_angle_max = 18.0
 	sky_mat.energy_multiplier = 1.0 if tod != "night" else 0.4
 	env.ambient_light_energy = amb_e
-	env.ambient_light_sky_contribution = 0.85
+	env.ambient_light_color = Color(0.62, 0.62, 0.64) if tod != "night" else Color(0.2, 0.24, 0.36)
+	env.ambient_light_sky_contribution = 0.55
 	env.tonemap_exposure = exposure
 	env.fog_light_color = fog_col
 	env.fog_depth_begin = depth_begin
@@ -213,6 +214,7 @@ func set_conditions(tod: String, wx: String) -> void:
 	env.volumetric_fog_density = vol_density
 	env.volumetric_fog_albedo = vol_albedo
 	_setup_weather_fx(wx)
+	EnvMaterials.set_night_lights(1.0 if tod == "night" else (0.35 if tod == "dusk" else 0.0))
 
 
 func _setup_weather_fx(wx: String) -> void:
