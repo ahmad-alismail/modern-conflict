@@ -19,9 +19,7 @@ const WEATHERS := ["clear", "haze", "dust", "rain"]
 
 func setup(s: GameSession) -> void:
 	session = s
-	set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	position = Vector2(-250, 96)
-	custom_minimum_size = Vector2(240, 0)
+	UITheme.place(self, Control.PRESET_TOP_RIGHT, Vector2(-250, 96), Vector2(240, 0))
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 5)
 	add_child(vb)

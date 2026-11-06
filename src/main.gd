@@ -49,7 +49,7 @@ func _on_navigate(screen: String, params: Dictionary) -> void:
 			_hide_loading()
 		"editor":
 			_set_screen(MapEditor.new())
-		"skirmish", "aivai":
+		"skirmish", "aivai", "sandbox":
 			_set_screen_quick(screen)
 		_:
 			if screen.begins_with("scenario:"):
@@ -121,6 +121,13 @@ func _set_screen_quick(kind: String) -> void:
 		cfg = GameConfig.ai_vs_ai(f0, f1, {"controller": "ai", "difficulty": "hard"}, c1, seed_v, opts)
 	else:
 		cfg = GameConfig.skirmish(f0, f1, DevHarness.arg("difficulty", "medium"), seed_v, opts)
+		if kind == "sandbox":
+			cfg["mode"] = "sandbox"
+			cfg["sandbox"] = true
+			cfg["victory"] = "none"
+			for t in cfg["teams"]:
+				t["forces"] = []
+				t["reinforcements"] = []
 	_on_navigate("game", cfg)
 
 

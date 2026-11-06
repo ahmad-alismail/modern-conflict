@@ -47,6 +47,11 @@ func _ready() -> void:
 		b.add_theme_font_size_override("font_size", 18)
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		vb.add_child(b)
+	match DevHarness.arg("menu-open"):
+		"skirmish", "sandbox", "aivai": _open(SetupScreen.new(DevHarness.arg("menu-open")))
+		"scenarios": _open(ScenarioScreen.new())
+		"settings": _open(SettingsMenu.new())
+		"load": _open(FileListScreen.new("load"))
 	var ver := UITheme.label("v%s · offline · no paid services required" % ProjectSettings.get_setting("application/config/version"), 12, UITheme.TEXT_DIM)
 	ver.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	ver.position = Vector2(70, -40)

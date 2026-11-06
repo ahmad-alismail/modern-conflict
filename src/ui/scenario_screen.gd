@@ -8,9 +8,7 @@ var _sel := 0
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	position = Vector2(-860, -330)
-	custom_minimum_size = Vector2(820, 660)
+	UITheme.place(self, Control.PRESET_CENTER_RIGHT, Vector2(-860, -330), Vector2(820, 660))
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 8)
 	add_child(vb)

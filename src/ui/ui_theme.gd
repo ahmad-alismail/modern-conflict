@@ -67,6 +67,28 @@ static func get_theme() -> Theme:
 	return t
 
 
+## Anchor a panel and place it by explicit anchor-relative offsets. Unlike setting
+## `position`, this is correct whether or not the control is already in the tree.
+## If content outgrows `size`, the panel grows away from its anchored edge.
+static func place(c: Control, preset: int, offset: Vector2, size: Vector2) -> void:
+	c.set_anchors_preset(preset)
+	c.custom_minimum_size = size
+	c.offset_left = offset.x
+	c.offset_top = offset.y
+	c.offset_right = offset.x + size.x
+	c.offset_bottom = offset.y + size.y
+	c.grow_horizontal = _grow_dir(c.anchor_left)
+	c.grow_vertical = _grow_dir(c.anchor_top)
+
+
+static func _grow_dir(anchor: float) -> Control.GrowDirection:
+	if anchor >= 1.0:
+		return Control.GROW_DIRECTION_BEGIN
+	if anchor <= 0.0:
+		return Control.GROW_DIRECTION_END
+	return Control.GROW_DIRECTION_BOTH
+
+
 static func _box(bg: Color, border: Color, bw: int, radius: int) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = bg

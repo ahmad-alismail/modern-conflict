@@ -5,9 +5,7 @@ class_name SettingsMenu
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_CENTER)
-	position = Vector2(-380, -330)
-	custom_minimum_size = Vector2(760, 660)
+	UITheme.place(self, Control.PRESET_CENTER, Vector2(-380, -330), Vector2(760, 660))
 	var vb := VBoxContainer.new()
 	add_child(vb)
 	vb.add_child(UITheme.label("SETTINGS", 26, UITheme.ACCENT))
