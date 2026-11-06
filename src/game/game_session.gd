@@ -259,6 +259,8 @@ func set_conditions(tod: String, weather: String) -> void:
 func set_paused(p: bool) -> void:
 	paused = p
 	view.set_paused(p)
+	if audio and audio.has_method("set_paused"):
+		audio.set_paused(p)
 	hud.on_pause_changed(p)
 
 
