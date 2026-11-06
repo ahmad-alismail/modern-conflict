@@ -21,6 +21,7 @@ var visible_now := PackedByteArray()
 var image: Image
 var texture: ImageTexture
 var _timer := 0.0
+var _smooth_acc := 0.0
 var _post: MeshInstance3D
 
 
@@ -75,7 +76,11 @@ func update(delta: float) -> void:
 	if _timer <= 0.0:
 		_timer = UPDATE_DT
 		_recompute()
-	var k := 1.0 - exp(-delta * 6.0)
+	_smooth_acc += delta
+	if _smooth_acc < 1.0 / 30.0:
+		return
+	var k := 1.0 - exp(-_smooth_acc * 6.0)
+	_smooth_acc = 0.0
 	for i in display.size():
 		var t := 1.0 if visible_now[i] else (EXPLORED if explored[i] else UNEXPLORED)
 		display[i] += (t - display[i]) * k
