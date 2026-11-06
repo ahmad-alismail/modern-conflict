@@ -92,6 +92,10 @@ func _build_presentation(env: Dictionary) -> void:
 	var toward := (size * 0.5 - sp).normalized()
 	cam.setup(Rect2(Vector2.ZERO, size), Vector3(sp.x, 0, sp.y) + Vector3(toward.x, 0, toward.y) * 12.0, toward.angle(), float(DevHarness.arg("cam-dist", "120")))
 	cam.view_changed.connect(_on_view_changed)
+	cam.height_query = func(p: Vector2) -> float:
+		if p.x < 0.0 or p.y < 0.0 or p.x >= size.x or p.y >= size.y:
+			return 0.0
+		return sim.nav.obstacle_height(p)
 	env_rig.follow(cam.camera)
 	view.fog.attach_to_camera(cam.camera)
 	view.set_shake_callback(cam.shake)
@@ -111,6 +115,15 @@ func _build_presentation(env: Dictionary) -> void:
 	if audio.has_method("set_ambience"):
 		audio.set_ambience(env.get("weather", "clear"), 0.2)
 	_warm_up_shaders()
+	if DevHarness.has_arg("follow"):
+		get_tree().create_timer(1.0).timeout.connect(func():
+			var want := DevHarness.arg("follow")
+			for u in sim.team_units(maxi(player_team, 0)):
+				if want == "true" or u.def_id == want:
+					var v: UnitView = view.unit_views.get(u.id)
+					if v:
+						cam.follow(v)
+						break)
 
 
 ## Draw one of every unit model (and its wreck) for a moment behind the loading overlay,

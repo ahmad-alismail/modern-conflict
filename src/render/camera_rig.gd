@@ -25,6 +25,9 @@ var _shake := 0.0
 var _shake_t := 0.0
 var _last_us := 0
 var input_enabled := true
+## Optional Callable(Vector2) -> float giving obstacle height at a map point (camera rises over roofs).
+var height_query: Callable
+var _lift := 0.0
 var cinematic := false
 
 
@@ -187,6 +190,12 @@ func _apply() -> void:
 	var pos := look_at_pt + back * dist
 	if _shake > 0.0:
 		pos += Vector3(sin(_shake_t * 61.0), sin(_shake_t * 47.0 + 1.3), cos(_shake_t * 53.0)) * _shake * 0.6
+	if height_query.is_valid():
+		var h := 0.0
+		for off in [Vector2.ZERO, Vector2(2.5, 0), Vector2(-2.5, 0), Vector2(0, 2.5), Vector2(0, -2.5)]:
+			h = maxf(h, float(height_query.call(Vector2(pos.x, pos.z) + off)))
+		_lift = lerpf(_lift, maxf(0.0, h + 2.5 - pos.y), 0.25)
+		pos.y += _lift
 	pos.y = maxf(pos.y, 1.5)
 	camera.look_at_from_position(pos, look_at_pt, Vector3.UP)
 	view_changed.emit(dist)
