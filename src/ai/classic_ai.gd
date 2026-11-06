@@ -200,6 +200,9 @@ func _strategic(w: SimWorld) -> void:
 	if scores.is_empty():
 		return
 	var n_targets := mini(int(p["targets"]), scores.size())
+	if doctrine == "ambush":
+		# light forces defend an area: ambush positions spread over several objectives
+		n_targets = mini(int(p["targets"]) + 1, scores.size())
 	var targets := scores.slice(0, n_targets)
 	# Assign ground units to targets: balanced, combined arms, nearest first.
 	var quota := int(ceil(float(ground.size()) / n_targets))
@@ -402,8 +405,10 @@ func _robot_center(units: Array) -> Vector2:
 
 
 func _air_strategy(w: SimWorld, u: SimUnit, known: Array, fallback: Vector2) -> void:
-	if u.hp_frac() < 0.4 and u.def.get("air_kind", "") == "heli":
+	if (u.hp_frac() < 0.4 or u.total_ammo_frac() < 0.2) and u.def.get("air_kind", "") == "heli":
 		_order(w, u, "rearm", _spawn, "move")
+		return
+	if _assign.get(u.id, {}).get("kind", "") == "rearm" and u.total_ammo_frac() < 0.9:
 		return
 	if p["avoid_aa"] and _aa_threat_near(w, u.pos, 210.0):
 		_order(w, u, "evade", u.pos.lerp(_spawn, 0.5), "move")

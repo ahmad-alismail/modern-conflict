@@ -703,6 +703,12 @@ static func _update_network(w: SimWorld) -> void:
 
 
 static func _update_support_vehicles(w: SimWorld) -> void:
+	# units back in their own deployment zone rearm (aircraft return to base to reload)
+	for u in w.units:
+		if u.is_active() and w.map.team_spawn(u.team).grow(10.0).has_point(u.pos):
+			for ws in u.weapons:
+				if ws["ammo"] < ws["ammo_max"]:
+					ws["ammo"] = mini(ws["ammo_max"], ws["ammo"] + maxi(1, int(ws["ammo_max"] * 0.08)))
 	for s in w.units:
 		if not s.is_active() or not (s.has_special("resupply") or s.has_special("repair")):
 			continue

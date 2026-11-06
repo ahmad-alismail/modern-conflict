@@ -29,6 +29,7 @@ var _avenues_x: Array[float] = []
 var _avenues_y: Array[float] = []
 var _intersections: Array[Vector2] = []
 var _occ := PackedByteArray()
+var _mirror := false                ## mirrors the district layout so neither deployment side is favored
 
 
 ## opts: {size: int cells (default 240), war_damage: 0..1, name: String}
@@ -48,6 +49,7 @@ func _generate(seed_value: int, opts: Dictionary) -> MapDef:
 	m.description = "A fictional city of %s, contested block by block." % place
 	var size := m.size_m()
 	_center = size * 0.5 + Vector2(rng.range_f(-20, 20), rng.range_f(-20, 20))
+	_mirror = rng.chance(0.5)
 
 	_base_terrain()
 	_layout_avenues(size)
@@ -73,6 +75,8 @@ func _base_terrain() -> void:
 func _district_at(p: Vector2, size: Vector2) -> String:
 	var d := p.distance_to(_center)
 	var rel := p - _center
+	if _mirror:
+		rel.x = -rel.x
 	if rel.x > 10.0 and rel.y < -10.0 and d < size.x * 0.36:
 		return D_OLD
 	if rel.x < -40.0 and rel.y > 60.0:
@@ -400,8 +404,13 @@ func _spawn_zones(size: Vector2) -> void:
 	m.districts.append({"name": "West Approach", "rect": Rect2(0, 0, _spawn_margin, size.y)})
 	m.districts.append({"name": "East Approach", "rect": Rect2(size.x - _spawn_margin, 0, _spawn_margin, size.y)})
 	var q := size * 0.5
-	m.districts.append({"name": "Old Quarter", "rect": Rect2(_center.x + 10, _center.y - size.y * 0.36, size.x * 0.36, size.y * 0.36 - 10)})
-	m.districts.append({"name": "Industrial Zone", "rect": Rect2(0, _center.y + 60, _center.x - 40, size.y - _center.y - 60)})
+	var oq := Rect2(_center.x + 10, _center.y - size.y * 0.36, size.x * 0.36, size.y * 0.36 - 10)
+	var ind := Rect2(0, _center.y + 60, _center.x - 40, size.y - _center.y - 60)
+	if _mirror:
+		oq.position.x = _center.x - 10 - oq.size.x
+		ind = Rect2(_center.x + 40, ind.position.y, size.x - _center.x - 40, ind.size.y)
+	m.districts.append({"name": "Old Quarter", "rect": oq})
+	m.districts.append({"name": "Industrial Zone", "rect": ind})
 	m.districts.append({"name": "Northern District", "rect": Rect2(0, 0, size.x, q.y)})
 	m.districts.append({"name": "Southern District", "rect": Rect2(0, q.y, size.x, q.y)})
 

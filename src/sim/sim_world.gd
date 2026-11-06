@@ -1018,7 +1018,7 @@ func on_unit_lost(u: SimUnit) -> void:
 	var t: Dictionary = teams[u.team]
 	t["stats"]["lost"] += 1
 	if mode == "vp":
-		t["tickets"] -= float(u.def["points"]) * 0.5
+		t["tickets"] -= float(u.def["points"]) * 0.5 * float(Defs.FACTIONS[t["faction"]].get("loss_mult", 1.0))
 
 
 func _check_victory() -> void:
