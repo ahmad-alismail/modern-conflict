@@ -21,6 +21,7 @@ var mines: Array = []                 # {p: Vector2, team: int}
 var strikes: Array = []               # pending support strikes
 var reveals: Array = []               # {team, p, r, t}
 var wrecks: Array = []                # {p: Vector2, def_id: String, facing: float, burn: float}
+var nav_log: Array = []               # runtime navigation edits in order: ["c", bi] | ["w", p, r] (replayed on load)
 var buildings: Array = []             # {hp, max_hp, state (0 ok,1 damaged,2 collapsed), garrison: Array[int]}
 var objectives: Array = []            # {id, name, p, r, owner, progress}
 var teams: Array = []                 # see _make_team
@@ -721,6 +722,17 @@ func _separate() -> void:
 
 
 # ====================================================== garrison/transport =====
+
+## Runtime navigation edits go through these so save/load can replay them in order.
+func nav_collapse(bi: int) -> void:
+	nav.collapse_building(bi)
+	nav_log.append(["c", bi])
+
+
+func nav_wreck(p: Vector2, r: float) -> void:
+	nav.add_wreck(p, r)
+	nav_log.append(["w", p, r])
+
 
 func building_rect(bi: int) -> Rect2:
 	var b: Dictionary = map.buildings[bi]

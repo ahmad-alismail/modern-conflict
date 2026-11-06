@@ -24,7 +24,7 @@ static func capture(w: SimWorld) -> Dictionary:
 		"strikes": w.strikes.duplicate(true), "reveals": w.reveals.duplicate(true), "wrecks": w.wrecks.duplicate(true),
 		"buildings": w.buildings.duplicate(true), "objectives": w.objectives.duplicate(true), "teams": teams,
 		"outcome": w.outcome.duplicate(), "env": w.env.duplicate(), "mode": w.mode, "time_limit": w.time_limit,
-		"hold_team": w.hold_team, "command_log": w.command_log.duplicate(true)}
+		"hold_team": w.hold_team, "command_log": w.command_log.duplicate(true), "nav_log": w.nav_log.duplicate(true)}
 
 
 static func _unit_to(u: SimUnit) -> Dictionary:
@@ -85,13 +85,15 @@ static func restore(w: SimWorld, d: Dictionary) -> void:
 	w.time_limit = d["time_limit"]
 	w.hold_team = d["hold_team"]
 	w.command_log = d["command_log"]
-	# rebuild runtime navigation changes
-	for bi in w.buildings.size():
-		if w.buildings[bi]["state"] == 2:
-			w.nav.collapse_building(bi)
+	# replay runtime navigation edits in their original order (overlaps are order-dependent);
+	# pre-war ruins were already applied by setup()
 	w.wrecks = d["wrecks"]
-	for wr in w.wrecks:
-		w.nav.add_wreck(wr["p"], Defs.unit(wr["def"])["radius"] * 0.6)
+	w.nav_log = []
+	for e in d.get("nav_log", []):
+		if e[0] == "c":
+			w.nav_collapse(int(e[1]))
+		else:
+			w.nav_wreck(e[1], float(e[2]))
 
 
 static func _proj_def(wid: String) -> Dictionary:

@@ -191,8 +191,10 @@ func district_at(p: Vector2) -> String:
 
 # --- serialization -------------------------------------------------------------
 
+## Full precision: footprints are rasterized from these values, so rounding would
+## change which cells a building covers after a save/load.
 static func _v2(v: Vector2) -> Array:
-	return [snappedf(v.x, 0.01), snappedf(v.y, 0.01)]
+	return [v.x, v.y]
 
 
 static func _r2(r: Rect2) -> Array:
@@ -210,7 +212,7 @@ static func _to_r2(a: Array) -> Rect2:
 func to_dict() -> Dictionary:
 	var bl := []
 	for b in buildings:
-		var bd := {"id": b["id"], "c": _v2(b["c"]), "size": _v2(b["size"]), "rot": snappedf(b["rot"], 0.0001),
+		var bd := {"id": b["id"], "c": _v2(b["c"]), "size": _v2(b["size"]), "rot": b["rot"],
 			"floors": b["floors"], "style": b["style"], "color": b["color"], "seed": b["seed"]}
 		for flag in ["ruined", "damaged"]:
 			if b.get(flag, false):
@@ -221,7 +223,7 @@ func to_dict() -> Dictionary:
 		wl.append({"a": _v2(w["a"]), "b": _v2(w["b"]), "h": w["h"], "kind": w["kind"]})
 	var pl := []
 	for p in props:
-		pl.append({"kind": p["kind"], "p": _v2(p["p"]), "rot": snappedf(p["rot"], 0.001), "s": snappedf(p["s"], 0.01)})
+		pl.append({"kind": p["kind"], "p": _v2(p["p"]), "rot": p["rot"], "s": p["s"]})
 	var rl := []
 	for r in roads:
 		rl.append({"a": _v2(r["a"]), "b": _v2(r["b"]), "w": r["w"], "kind": r["kind"]})
@@ -273,7 +275,7 @@ func save_json(path: String) -> Error:
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		return FileAccess.get_open_error()
-	f.store_string(JSON.stringify(to_dict()))
+	f.store_string(JSON.stringify(to_dict(), "", true, true))
 	return OK
 
 

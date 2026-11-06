@@ -18,9 +18,9 @@ func test_save_restore_continues_identically() -> void:
 	for i in 1400:
 		w.step()
 	var snap := Serializer.capture(w)
-	# round-trip through the on-disk text format, like SaveSystem does
-	var text := var_to_str({"map": w.map.to_dict(), "state": snap})
-	var data: Dictionary = str_to_var(text)
+	# round-trip through the on-disk binary format, like SaveSystem does
+	var bytes := var_to_bytes({"map": w.map.to_dict(), "state": snap})
+	var data: Dictionary = bytes_to_var(bytes)
 	var w2 := SimWorld.new()
 	w2.setup(_scenario(MapDef.from_dict(data["map"])))
 	Serializer.restore(w2, data["state"])

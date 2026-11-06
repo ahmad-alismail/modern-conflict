@@ -17,7 +17,7 @@ static func _write(path: String, data: Variant) -> bool:
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		return false
-	f.store_string(var_to_str(data))
+	f.store_var(data)   # binary variant format: lossless doubles (exact replays / saves)
 	return true
 
 
@@ -25,7 +25,7 @@ static func _read(path: String) -> Variant:
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return null
-	return str_to_var(f.get_as_text())
+	return f.get_var()
 
 
 static func save_session(s: GameSession) -> String:

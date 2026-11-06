@@ -594,7 +594,7 @@ static func damage_building(w: SimWorld, bi: int, dmg: float, src: SimUnit) -> v
 		bs["state"] = 2
 		var occupants: Array = bs["garrison"].duplicate()
 		bs["garrison"].clear()
-		w.nav.collapse_building(bi)
+		w.nav_collapse(bi)
 		w.emit({"t": "bld_collapsed", "b": bi})
 		for id in occupants:
 			var u: SimUnit = w.by_id.get(id)
@@ -648,7 +648,7 @@ static func destroy_unit(w: SimWorld, u: SimUnit, killer_id: int, expended: bool
 	if u.cat == Defs.CAT_VEH or (u.is_air() and u.def.get("air_kind", "") == "heli"):
 		wreck = true
 		w.wrecks.append({"p": u.pos, "def": u.def_id, "facing": u.facing, "turret": u.turret, "burn": 40.0})
-		w.nav.add_wreck(u.pos, u.def["radius"] * 0.6)
+		w.nav_wreck(u.pos, u.def["radius"] * 0.6)
 		splash(w, null, {"damage": 90.0, "pen": 10.0, "splash": 6.0, "suppress": 40.0}, u.pos, 1.0)
 	w.emit({"t": "destroyed", "u": u.id, "wreck": wreck, "air": u.is_air(), "expended": expended, "killer": killer_id})
 	if u.cat != Defs.CAT_INF and not expended:
