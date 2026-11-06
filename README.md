@@ -59,5 +59,16 @@ Balance batch: `.tools/godot/Godot_v4.7.2-stable_win64_console.exe --headless --
 ## Project layout
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/CONTRACTS.md](docs/CONTRACTS.md). All art and audio is generated procedurally at runtime, so there are no asset files to license.
 
+## Known limitations
+- **Procedural art.** All models are generated from primitives at runtime. The look comes from lighting, atmosphere and detail density, not sculpted assets. Real glTF models can be swapped in behind `UnitModels` / `BuildingBuilder` (see `docs/CONTRACTS.md`).
+- **Audio** is fully synthesized and was tuned from waveform analysis (levels, clipping, loop seams). Nobody has listened to it yet, so expect the mix to need adjusting by ear.
+- **LLM commander:**
+  - Verified end-to-end with a local Ollama model (`qwen3.5:9b`).
+  - The OpenAI-compatible and Anthropic paths use the documented request formats but have not been run against a live endpoint here.
+  - If an endpoint rejects schema-constrained output, the commander retries with plain JSON instructions.
+  - If it fails repeatedly, the classic AI takes over.
+- **Balance** was tuned with headless AI-vs-AI batches (all faction matchups near even). Human play will surface different strengths.
+- **Multiplayer** is not implemented (listed as future in the vision). The deterministic simulation and command stream are a natural foundation for lockstep networking.
+
 ## Notes
 All factions, places, units and events are fictional.

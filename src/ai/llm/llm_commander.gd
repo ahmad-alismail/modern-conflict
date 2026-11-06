@@ -70,6 +70,7 @@ var _provider := ""
 var _disabled_reason := ""
 var _pending_world: SimWorld
 var _pending_orders: Array = []
+var _use_schema := true            # dropped automatically if an endpoint rejects schema-constrained output
 
 
 func _init(p_team: int, p_session) -> void:
@@ -165,6 +166,8 @@ func _send(obs: Dictionary) -> void:
 				"messages": [{"role": "user", "content": user_text}],
 				"output_config": {"effort": "low", "format": {"type": "json_schema", "schema": ORDER_SCHEMA}},
 			}
+			if not _use_schema:
+				body["output_config"] = {"effort": "low"}
 		"openai_compat":
 			url = String(Settings.get_value("llm", "openai_url")).trim_suffix("/") + "/chat/completions"
 			var key := String(Settings.get_value("llm", "openai_key")).strip_edges()
@@ -175,6 +178,8 @@ func _send(obs: Dictionary) -> void:
 				"messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_text}],
 				"response_format": {"type": "json_schema", "json_schema": {"name": "orders", "schema": ORDER_SCHEMA}},
 			}
+			if not _use_schema:
+				body.erase("response_format")
 		_:
 			url = String(Settings.get_value("llm", "ollama_url")).trim_suffix("/") + "/api/chat"
 			body = {
@@ -196,6 +201,12 @@ func _on_response(result: int, code: int, _headers: PackedStringArray, body: Pac
 		return
 	var text := body.get_string_from_utf8()
 	if code < 200 or code >= 300:
+		if code == 400 and _use_schema and _provider != "ollama":
+			# some endpoints reject schema-constrained output: retry with prompt-only JSON
+			_use_schema = false
+			_timer = 0.5
+			_log("LLM endpoint rejected structured output; retrying with plain JSON instructions.")
+			return
 		_fail("HTTP %d: %s" % [code, text.substr(0, 160)])
 		return
 	var data = JSON.parse_string(text)
