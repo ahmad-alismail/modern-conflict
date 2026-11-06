@@ -201,19 +201,29 @@ func _build_bottom() -> void:
 	vb.add_child(UITheme.label("SUPPORT", 12, UITheme.TEXT_DIM))
 	_support_box = HBoxContainer.new()
 	vb.add_child(_support_box)
-	if session.player_team >= 0:
-		var team: Dictionary = session.sim.teams[session.player_team]
-		var keys: Array = team["support"].keys()
-		for i in keys.size():
-			var k: String = keys[i]
-			var b := UITheme.button("", func(): session.input.set_mode("support:" + k), "%s [F%d]\n%s" % [Defs.SUPPORT[k]["name"], i + 1, Defs.SUPPORT[k]["desc"]])
-			b.add_theme_font_size_override("font_size", 11)
-			b.custom_minimum_size = Vector2(84, 40)
-			_support_box.add_child(b)
-			_support_buttons[k] = b
-		_reinforce_btn = UITheme.button("", func(): session.issue({"type": "reinforce"}), "Call the next reinforcement wave [F5]")
-		_reinforce_btn.add_theme_font_size_override("font_size", 12)
-		vb.add_child(_reinforce_btn)
+	_reinforce_btn = UITheme.button("", func(): session.issue({"type": "reinforce"}), "Call the next reinforcement wave [F5]")
+	_reinforce_btn.add_theme_font_size_override("font_size", 12)
+	vb.add_child(_reinforce_btn)
+	rebuild_support()
+
+
+## (Re)build the support-power buttons for the commanded team (sandbox can switch sides).
+func rebuild_support() -> void:
+	for c in _support_box.get_children():
+		c.queue_free()
+	_support_buttons.clear()
+	_reinforce_btn.visible = session.player_team >= 0
+	if session.player_team < 0:
+		return
+	var team: Dictionary = session.sim.teams[session.player_team]
+	var keys: Array = team["support"].keys()
+	for i in keys.size():
+		var k: String = keys[i]
+		var b := UITheme.button("", func(): session.input.set_mode("support:" + k), "%s [F%d]\n%s" % [Defs.SUPPORT[k]["name"], i + 1, Defs.SUPPORT[k]["desc"]])
+		b.add_theme_font_size_override("font_size", 11)
+		b.custom_minimum_size = Vector2(84, 40)
+		_support_box.add_child(b)
+		_support_buttons[k] = b
 
 
 func _fake_key(code: Key) -> InputEventKey:
@@ -316,6 +326,8 @@ func _refresh_support() -> void:
 		return
 	var team: Dictionary = session.sim.teams[session.player_team]
 	for k in _support_buttons:
+		if not team["support"].has(k):
+			continue
 		var s: Dictionary = team["support"][k]
 		var b: Button = _support_buttons[k]
 		var name: String = Defs.SUPPORT[k]["name"]
@@ -492,6 +504,9 @@ func handle_events(events: Array) -> void:
 					_add_log(e["text"], e.get("kind", "info"))
 			"bld_collapsed":
 				refresh_map = true
+			"rejected":
+				if e.get("team", -1) == session.player_team:
+					notice(e.get("text", "Order not possible"))
 			"spotted":
 				if e["team"] == session.player_team and Settings.get_value("gameplay", "pause_on_contact") and not session.paused:
 					session.set_paused(true)

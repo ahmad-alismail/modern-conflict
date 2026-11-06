@@ -28,6 +28,29 @@ static func ai_vs_ai(f0: String, f1: String, c0: Dictionary, c1: Dictionary, map
 	return cfg
 
 
+## Translate a GameSession config into a SimWorld.setup() scenario (generating the map
+## if needed). Shared by the game and headless tools so both run exactly the same battle.
+static func to_sim_scenario(config: Dictionary) -> Dictionary:
+	var map: MapDef = config.get("map")
+	if map == null:
+		var gen_opts := {"war_damage": config.get("war_damage", 0.25)}
+		if String(config.get("map_name", "")) != "":
+			gen_opts["name"] = config["map_name"]
+		map = CityGenerator.generate(int(config.get("map_seed", 1)), gen_opts)
+	var teams := []
+	for t in config["teams"]:
+		var td := {"faction": t["faction"], "name": t.get("name", Defs.FACTIONS[t["faction"]]["name"])}
+		for k in ["forces", "placed", "support", "reinforcements", "tickets"]:
+			if t.has(k):
+				td[k] = t[k]
+		teams.append(td)
+	var env: Dictionary = config.get("env", {"tod": "day", "weather": "clear"})
+	return {"map": map, "seed": int(config.get("seed", 1)), "mode": config.get("victory", "vp"),
+		"tickets": int(config.get("tickets", 500)), "time_limit": float(config.get("time_limit", 0.0)),
+		"hold_team": int(config.get("hold_team", -1)), "id": config.get("scenario_id", ""), "sandbox": config.get("sandbox", false),
+		"env": {"night": env.get("tod", "day") == "night", "weather": env.get("weather", "clear")}, "teams": teams}
+
+
 static func _base(map_seed: int, opts: Dictionary) -> Dictionary:
 	var cfg := {
 		"map_seed": map_seed,

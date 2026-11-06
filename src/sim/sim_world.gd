@@ -148,6 +148,9 @@ func _apply_commands() -> void:
 	for cmd in batch:
 		if _apply(cmd):
 			command_log.append({"tick": tick, "cmd": cmd})
+		elif cmd.get("type", "") in ["support", "reinforce"]:
+			emit({"t": "rejected", "team": int(cmd.get("team", -1)),
+				"text": "Not available: target invalid, no charges, or on cooldown" if cmd["type"] == "support" else "No reinforcements available yet"})
 
 
 func _own_units(cmd: Dictionary) -> Array:
@@ -972,9 +975,9 @@ func _update_objectives(dt: float) -> void:
 		var prev_owner: int = o["owner"]
 		var rate := 0.0
 		if counts[0] > 0 and counts[1] == 0:
-			rate = 0.07 * mini(counts[0], 3)
+			rate = 0.035 * mini(counts[0], 3)
 		elif counts[1] > 0 and counts[0] == 0:
-			rate = -0.07 * mini(counts[1], 3)
+			rate = -0.035 * mini(counts[1], 3)
 		o["contested"] = counts[0] > 0 and counts[1] > 0
 		if rate != 0.0:
 			var p: float = o["progress"] + rate * dt

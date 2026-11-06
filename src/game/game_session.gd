@@ -36,34 +36,19 @@ var _battle_level := 0.0
 func start(p_config: Dictionary) -> void:
 	config = p_config
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	var map: MapDef = config.get("map")
-	if map == null:
-		var gen_opts := {"war_damage": config.get("war_damage", 0.25)}
-		if String(config.get("map_name", "")) != "":
-			gen_opts["name"] = config["map_name"]
-		map = CityGenerator.generate(int(config.get("map_seed", 1)), gen_opts)
-	initial_map = config.get("initial_map", map.to_dict())
-	var teams := []
-	for t in config["teams"]:
-		var td := {"faction": t["faction"], "name": t.get("name", Defs.FACTIONS[t["faction"]]["name"])}
-		for k in ["forces", "placed", "support", "reinforcements", "tickets"]:
-			if t.has(k):
-				td[k] = t[k]
-		teams.append(td)
+	var scenario := GameConfig.to_sim_scenario(config)
+	initial_map = config.get("initial_map", (scenario["map"] as MapDef).to_dict())
 	var env: Dictionary = config.get("env", {"tod": "day", "weather": "clear"})
 	sim = SimWorld.new()
-	sim.setup({"map": map, "seed": int(config.get("seed", 1)), "mode": config.get("victory", "vp"),
-		"tickets": int(config.get("tickets", 500)), "time_limit": float(config.get("time_limit", 0.0)),
-		"hold_team": int(config.get("hold_team", -1)), "id": config.get("scenario_id", ""), "sandbox": config.get("sandbox", false),
-		"env": {"night": env.get("tod", "day") == "night", "weather": env.get("weather", "clear")}, "teams": teams})
+	sim.setup(scenario)
 	if config.has("state"):
 		Serializer.restore(sim, config["state"])
+	if config.has("replay"):
+		replay = config["replay"]
 	_build_presentation(env)
 	_setup_commanders()
 	set_speed(float(DevHarness.arg("speed", str(Settings.get_value("gameplay", "default_speed")))))
 	_last_us = Time.get_ticks_usec()
-	if config.has("replay"):
-		replay = config["replay"]
 
 
 func _build_presentation(env: Dictionary) -> void:
@@ -212,6 +197,8 @@ func _tick() -> void:
 			if commanders[ti] != null and ai_enabled[ti]:
 				commanders[ti].think(sim)
 	sim.step()
+	if not replay.is_empty() and sim.tick == int(replay.get("ticks", -1)) and DevHarness.has_arg("replay"):
+		print("[replay] reached recorded end tick=", sim.tick, " hash=", sim.state_hash(), " outcome=", sim.outcome.get("reason", "none"))
 
 
 func _track_battle_level(events: Array, dt: float) -> void:
@@ -245,6 +232,7 @@ func set_ai_enabled(team: int, on: bool) -> void:
 func switch_control(team: int) -> void:
 	player_team = team
 	ai_enabled[team] = false
+	hud.rebuild_support()
 	view.player_team = team
 	view.fog.team = team
 	view.fog.set_enabled(view.fog.enabled)
@@ -291,6 +279,8 @@ func _on_game_over(e: Dictionary) -> void:
 	outcome["replay"] = make_replay()
 	hud.show_end_screen(outcome)
 	ended.emit(outcome)
+	if DevHarness.has_arg("auto-save-replay"):
+		print("[replay] saved ", ProjectSettings.globalize_path(SaveSystem.save_replay(outcome["replay"])), " ticks=", sim.tick, " hash=", sim.state_hash())
 
 
 func make_replay() -> Dictionary:

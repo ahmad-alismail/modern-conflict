@@ -436,6 +436,12 @@ func _targeting_click(pos: Vector2, shift: bool) -> void:
 		return
 	elif mode.begins_with("support:"):
 		var power := mode.substr(8)
+		if power == "tunnel":
+			var bi := pick_building(pos)
+			if bi < 0:
+				session.hud.notice("Tunnel ambush: click a building")
+				return
+			p = sim().map.buildings[bi]["c"]
 		var dir := session.cam.forward_2d()
 		session.issue({"type": "support", "power": power, "pos": p, "dir": dir})
 		_marker(Vector3(p.x, 0.1, p.y), Color(1.0, 0.85, 0.2), Defs.SUPPORT[power]["radius"])

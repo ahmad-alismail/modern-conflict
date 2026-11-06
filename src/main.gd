@@ -21,6 +21,11 @@ func _ready() -> void:
 		push_error("No preview script at " + path)
 	Events.navigate.connect(_on_navigate)
 	var screen := DevHarness.arg("screen", "menu")
+	if DevHarness.has_arg("replay"):
+		var cfg := SaveSystem.load_replay(DevHarness.arg("replay"))
+		if not cfg.is_empty():
+			call_deferred("_on_navigate", "game", cfg)
+			return
 	call_deferred("_on_navigate", screen, {})
 
 
