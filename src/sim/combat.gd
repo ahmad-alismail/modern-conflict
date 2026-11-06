@@ -12,6 +12,7 @@ const MINE := {"name": "AT Mine", "damage": 480.0, "pen": 260.0, "splash": 4.0, 
 const STRIKE_SHELL := {"name": "155mm Shell", "splash_dmg": 220.0, "damage": 280.0, "pen": 80.0, "splash": 12.0, "suppress": 60.0, "proj": Defs.P_MORTAR}
 const STRIKE_BOMB := {"name": "Bomb", "splash_dmg": 300.0, "damage": 450.0, "pen": 120.0, "splash": 15.0, "suppress": 80.0, "proj": Defs.P_BOMB}
 const STRIKE_ROCKET := {"name": "Rocket", "damage": 150.0, "pen": 40.0, "splash": 8.0, "suppress": 45.0, "proj": Defs.P_MORTAR}
+const STRIKE_TACTICAL := {"name": "Tactical Missile", "splash_dmg": 220.0, "damage": 700.0, "pen": 900.0, "splash": 10.0, "suppress": 70.0, "proj": Defs.P_MISSILE, "top_attack": true}
 const STRIKE_MISSILE := {"name": "Precision Missile", "splash_dmg": 160.0, "damage": 540.0, "pen": 720.0, "splash": 7.0, "suppress": 50.0, "proj": Defs.P_MISSILE, "top_attack": true}
 
 

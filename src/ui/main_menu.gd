@@ -49,6 +49,10 @@ func _ready() -> void:
 		vb.add_child(b)
 	match DevHarness.arg("menu-open"):
 		"skirmish", "sandbox", "aivai": _open(SetupScreen.new(DevHarness.arg("menu-open")))
+		"forces":
+			var ss := SetupScreen.new("skirmish")
+			_open(ss)
+			ss.call_deferred("_open_force_builder")
 		"scenarios": _open(ScenarioScreen.new())
 		"settings": _open(SettingsMenu.new())
 		"load": _open(FileListScreen.new("load"))

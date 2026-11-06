@@ -34,6 +34,9 @@ static func request(w: SimWorld, team: int, power: String, pos: Vector2, dir: Ve
 		"artillery":
 			strike["left"] = 8
 			strike["interval"] = 0.7
+		"missile_strike":
+			strike["left"] = 2
+			strike["interval"] = 1.2
 		"airstrike":
 			strike["left"] = 6
 			strike["interval"] = 0.14
@@ -127,6 +130,18 @@ static func _fire(w: SimWorld, s: Dictionary, i: int) -> void:
 			if bi >= 0 and w.buildings[bi]["state"] != 2 and w.buildings[bi]["garrison"].size() < w.building_capacity(bi):
 				w._enter_building(u, bi)
 			w.message("Militia emerged from a tunnel", team, "good")
+		"missile_strike":
+			# each missile homes on the nearest visible enemy vehicle near the aim point
+			var tgt: SimUnit = null
+			var td := radius + 6.0
+			for e in w.units_near(pos, radius + 6.0):
+				if e.team != team and e.cat == Defs.CAT_VEH and w.is_visible_to(e, team) and e.pos.distance_to(pos) < td:
+					tgt = e
+					td = e.pos.distance_to(pos)
+			var mp := tgt.pos if tgt != null else pos + Vector2(w.rng.gauss(), w.rng.gauss()) * radius * 0.3
+			if tgt != null:
+				Combat.apply_damage(w, null, Combat.STRIKE_TACTICAL, tgt, tgt.pos, true, 1.0)
+			_detonate(w, Combat.STRIKE_TACTICAL, mp, "missile")
 		"drone_strike":
 			var best: SimUnit = null
 			var bd := 14.0

@@ -19,6 +19,8 @@ var _preview: TextureRect
 var _desc0: Label
 var _desc1: Label
 var _custom_maps: Array = []
+var _forces: Array = [null, null]     # custom {units, support} per side, null = faction default
+var _forces_label: Label
 
 const DIFFS := ["easy", "medium", "hard"]
 
@@ -28,7 +30,7 @@ func _init(p_kind: String) -> void:
 
 
 func _ready() -> void:
-	UITheme.place(self, Control.PRESET_CENTER_RIGHT, Vector2(-820, -290), Vector2(780, 580))
+	UITheme.place(self, Control.PRESET_CENTER_RIGHT, Vector2(-820, -320), Vector2(780, 640))
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 8)
 	add_child(vb)
@@ -54,8 +56,22 @@ func _ready() -> void:
 	_row(left, "Red side" if kind != "skirmish" else "Enemy faction", _f1)
 	_desc1 = _desc_label()
 	_row(left, "", _desc1)
-	_f0.item_selected.connect(func(_i): _update_desc())
-	_f1.item_selected.connect(func(_i): _update_desc())
+	_f0.item_selected.connect(func(_i):
+		_forces[0] = null
+		_update_desc())
+	_f1.item_selected.connect(func(_i):
+		_forces[1] = null
+		_update_desc())
+	if kind != "sandbox":
+		var frow := HBoxContainer.new()
+		frow.add_theme_constant_override("separation", 8)
+		var fb := UITheme.button("Customize forces…", _open_force_builder, "Choose exactly which units and support strikes each side starts with")
+		frow.add_child(fb)
+		_forces_label = UITheme.label("", 12, UITheme.TEXT_DIM)
+		_forces_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+		_forces_label.custom_minimum_size = Vector2(200, 0)
+		frow.add_child(_forces_label)
+		_row(left, "Forces", frow)
 	if kind == "aivai":
 		_c0 = _commander_opt()
 		_row(left, "Blue commander", _c0)
@@ -165,6 +181,36 @@ func _desc_label() -> Label:
 func _update_desc() -> void:
 	_desc0.text = Defs.FACTIONS[Defs.FACTION_ORDER[_f0.selected]]["desc"]
 	_desc1.text = Defs.FACTIONS[Defs.FACTION_ORDER[_f1.selected]]["desc"]
+	_update_forces_label()
+
+
+func _side_names() -> Array:
+	return ["Blue", "Red"] if kind != "skirmish" else ["You", "Enemy"]
+
+
+func _update_forces_label() -> void:
+	if _forces_label == null:
+		return
+	var parts := []
+	var names := _side_names()
+	for i in 2:
+		parts.append("%s: %s" % [names[i], "default" if _forces[i] == null else ForceBuilder.describe(_forces[i])])
+	_forces_label.text = "\n".join(parts)
+
+
+func _open_force_builder() -> void:
+	var fb := ForceBuilder.new()
+	get_parent().add_child(fb)
+	var titles := ["Blue forces", "Red forces"] if kind != "skirmish" else ["Your forces", "Enemy forces"]
+	fb.setup([Defs.FACTION_ORDER[_f0.selected], Defs.FACTION_ORDER[_f1.selected]], titles, _forces)
+	fb.applied.connect(func(sides: Array):
+		_forces = sides
+		_update_forces_label())
+	# the builder is modal: hide the setup panel underneath until it closes
+	visible = false
+	fb.tree_exited.connect(func():
+		if is_instance_valid(self):
+			visible = true)
 
 
 func _current_map() -> MapDef:
@@ -228,4 +274,12 @@ func _start() -> void:
 			cfg["teams"][1]["controller"] = "ai"
 		_:
 			cfg = GameConfig.skirmish(f0, f1, DIFFS[_c1.selected], int(_seed.value), opts)
+	for i in 2:
+		if _forces[i] != null and kind != "sandbox":
+			cfg["teams"][i]["forces"] = ForcePresets.to_forces(_forces[i]["units"])
+			var sup := {}
+			for k in _forces[i]["support"]:
+				if int(_forces[i]["support"][k]) > 0:
+					sup[k] = int(_forces[i]["support"][k])
+			cfg["teams"][i]["support"] = sup
 	Events.navigate.emit("game", cfg)

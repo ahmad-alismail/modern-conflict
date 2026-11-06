@@ -249,6 +249,7 @@ const SUPPORT := {
 	"minefield": {"name": "Minefield", "desc": "Hidden anti-vehicle mines in a small area.", "delay": 2.0, "cooldown": 60.0, "radius": 14.0},
 	"tunnel": {"name": "Tunnel Ambush", "desc": "A militia squad emerges from a building you can see.", "delay": 4.0, "cooldown": 75.0, "radius": 0.0},
 	"drone_strike": {"name": "Orbital Drone Strike", "desc": "Precision missile on a point after a short delay.", "delay": 5.0, "cooldown": 70.0, "radius": 8.0},
+	"missile_strike": {"name": "Missile Strike", "desc": "Two long-range guided missiles hit the area, homing on vehicles.", "delay": 8.0, "cooldown": 90.0, "radius": 14.0},
 	"emp": {"name": "EW Burst", "desc": "Suppresses all units and stalls guided weapons in an area.", "delay": 2.0, "cooldown": 90.0, "radius": 35.0},
 }
 
@@ -256,17 +257,20 @@ const FACTIONS := {
 	"cdf": {"name": "Coalition Defense Force", "short": "CDF", "kind": "Conventional Military",
 		"color": Color(0.32, 0.55, 0.85), "desc": "Modern combined-arms military: armor, air support, thermal sights, artillery.",
 		"support": {"artillery": 1, "airstrike": 1, "recon_uav": 2, "smoke_barrage": 2},
+		"support_options": ["artillery", "airstrike", "missile_strike", "recon_uav", "smoke_barrage"],
 		"forces": ["cdf_rifle", "cdf_rifle", "cdf_rifle", "cdf_mg", "cdf_atgm", "cdf_sniper", "cdf_mortar", "cdf_mbt", "cdf_mbt", "cdf_ifv", "cdf_mrap", "cdf_heli", "cdf_supply"],
 		"reinforcements": [["cdf_rifle", "cdf_rifle", "cdf_mrap"], ["cdf_mbt", "cdf_atgm"]]},
 	"pdb": {"name": "People's Defense Brigades", "short": "PDB", "kind": "Light Forces",
 		"color": Color(0.85, 0.45, 0.25), "desc": "Numerous, concealed light infantry and technicals. Master of ambush and urban terrain. Losses cost fewer tickets.",
 		"loss_mult": 0.55,
 		"support": {"rocket_barrage": 2, "minefield": 2, "tunnel": 2, "smoke_barrage": 1},
+		"support_options": ["rocket_barrage", "minefield", "tunnel", "smoke_barrage"],
 		"forces": ["pdb_militia", "pdb_militia", "pdb_militia", "pdb_militia", "pdb_militia", "pdb_militia", "pdb_rpg", "pdb_rpg", "pdb_rpg", "pdb_hmg", "pdb_hmg", "pdb_hmg", "pdb_marksman", "pdb_mortar", "pdb_manpads", "pdb_manpads", "pdb_technical", "pdb_technical", "pdb_technical", "pdb_spg", "pdb_mrl", "pdb_tank"],
 		"reinforcements": [["pdb_militia", "pdb_militia", "pdb_rpg", "pdb_technical"], ["pdb_militia", "pdb_hmg", "pdb_spg"], ["pdb_militia", "pdb_militia", "pdb_rpg"]]},
 	"hac": {"name": "Helix Autonomous Command", "short": "HAC", "kind": "Advanced Autonomous Forces",
 		"color": Color(0.3, 0.85, 0.8), "desc": "Drones, robots and sensors. Superb vision and precision, few humans, vulnerable to jamming.",
 		"support": {"drone_strike": 3, "recon_uav": 2, "emp": 2, "smoke_barrage": 1},
+		"support_options": ["drone_strike", "recon_uav", "emp", "smoke_barrage"],
 		"forces": ["hac_operator", "hac_operator", "hac_hound", "hac_hound", "hac_hound", "hac_hound", "hac_ugv_gun", "hac_ugv_gun", "hac_ugv_atgm", "hac_recon", "hac_recon", "hac_fpv", "hac_fpv", "hac_fpv", "hac_wasp", "hac_wasp", "hac_ucav", "hac_ew", "hac_mast"],
 		"reinforcements": [["hac_hound", "hac_fpv", "hac_fpv", "hac_wasp"], ["hac_ugv_atgm", "hac_ugv_gun", "hac_operator"]]},
 }

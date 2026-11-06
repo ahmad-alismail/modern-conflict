@@ -603,7 +603,7 @@ func _support(w: SimWorld) -> void:
 				target = _best_cluster(vis, mine, 25.0, 22.0, 45.0)
 			"airstrike":
 				target = _best_cluster(vis, mine, 30.0, 35.0, 55.0)
-			"drone_strike":
+			"drone_strike", "missile_strike":
 				var best: SimUnit = null
 				for e in vis:
 					if e.cat == Defs.CAT_VEH and (best == null or e.def["points"] > best.def["points"]):
